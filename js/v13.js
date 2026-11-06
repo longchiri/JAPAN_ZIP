@@ -401,7 +401,7 @@ function matchAwards(doc){
   for(const r of doc.rows){if('omhasv'.includes(r[3]))continue;const n=normName(r[1]);if(n.length<2)continue;if(!byN.has(n))byN.set(n,[]);byN.get(n).push(r);const p2=n.slice(0,2);if(!byP.has(p2))byP.set(p2,new Set());byP.get(p2).add(n)}
   for(const a of list){
     let c=byN.get(a.n)||[];
-    if(!c.length&&a.n.length>=3){for(const k of byP.get(a.n.slice(0,2))||[]){if(k.startsWith(a.n)||(k.length>=3&&a.n.startsWith(k)&&!/店|館/.test(a.n.slice(k.length))))c=c.concat(byN.get(k))}}
+    if(!c.length&&a.n.length>=4){for(const k of byP.get(a.n.slice(0,2))||[]){if(k.startsWith(a.n)||(k.length>=4&&a.n.startsWith(k)&&!/店|館/.test(a.n.slice(k.length))))c=c.concat(byN.get(k))}}
     if(c.length>1){const loc=a.loc.replace(/駅$/,'');const f=c.filter(r=>{const ct=doc.cities[r[7]];return ct&&(loc.includes(stripSuffix(ct[0]))||(r[8]&&loc.includes(r[8])))});if(f.length)c=f}
     a.row=c.length&&c.length<=3?c[0]:null;
     if(a.row){if(!doc._aw.has(a.row[0]))doc._aw.set(a.row[0],[]);doc._aw.get(a.row[0]).push(a)}
