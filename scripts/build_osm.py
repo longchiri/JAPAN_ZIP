@@ -12,7 +12,7 @@ JAPAN ZIP — OpenStreetMap 전국 음식점 데이터 빌드 스크립트 (무�
 GitHub Actions(.github/workflows/build-osm.yml)가 매월 자동 실행합니다.
 데이터 © OpenStreetMap contributors, ODbL 1.0
 """
-import argparse, datetime, json, math, os, sys, collections
+import argparse, datetime, json, math, os, sys, collections, time, urllib.request, urllib.parse
 
 import numpy as np
 import shapely
@@ -126,6 +126,45 @@ def assign(points, polys, nearest=False, max_dist=0.3):
     return out
 
 
+def wikidata_enrich(recs, batch=50):
+    """관광지에 붙은 wikidata 태그로 한국어 이름·설명(없으면 일본어 설명)을 가져온다. 무료 공개 데이터, 키 불필요."""
+    ids = sorted({r[13] for r in recs if r[13].startswith('Q') and r[3] in 'omha'})
+    print('wikidata ids:', len(ids), flush=True)
+    info = {}
+    for i in range(0, len(ids), batch):
+        chunk = ids[i:i + batch]
+        url = 'https://www.wikidata.org/w/api.php?' + urllib.parse.urlencode({
+            'action': 'wbgetentities', 'ids': '|'.join(chunk), 'props': 'labels|descriptions',
+            'languages': 'ko|ja', 'format': 'json'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'JAPAN-ZIP-build/1.0 (static travel guide; monthly batch)'})
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=40) as res:
+                    data = json.load(res)
+                break
+            except Exception as e:
+                data = None
+                time.sleep(3 * (attempt + 1))
+        if not data:
+            print('  wikidata batch failed, skipping', i, flush=True)
+            continue
+        for q, ent in (data.get('entities') or {}).items():
+            lab = (ent.get('labels') or {}).get('ko', {}).get('value', '')
+            d = ent.get('descriptions') or {}
+            info[q] = (lab, d.get('ko', {}).get('value', '') or d.get('ja', {}).get('value', ''))
+        time.sleep(0.3)
+    n = 0
+    for r in recs:
+        if r[13] in info:
+            lab, desc = info[r[13]]
+            if lab and not r[2] and lab != r[1]:
+                r[2] = lab[:60]
+            if desc and not r[11]:
+                r[11] = desc[:120]
+                n += 1
+    print('wikidata descriptions added:', n, flush=True)
+
+
 def short_url(u):
     if not u:
         return ''
@@ -139,6 +178,7 @@ def main():
     ap.add_argument('--admin', required=True)
     ap.add_argument('--out', default='data/osm')
     ap.add_argument('--built', default=datetime.date.today().isoformat())
+    ap.add_argument('--no-wikidata', action='store_true', help='관광지 설명(위키데이터) 조회 생략')
     args = ap.parse_args()
 
     print('loading admin boundaries…', flush=True)
@@ -187,9 +227,13 @@ def main():
             1 if (t.get('brand') or t.get('brand:wikidata')) else 0,
             (t.get('tourism') or t.get('historic') or t.get('bath:type') or '')[:20],
             (t.get('description:ko') or t.get('description:ja') or t.get('description') or '')[:120],
+            (t.get('brand') or t.get('brand:ja') or '')[:40],
+            (t.get('wikidata') or '').strip(),
         ])
         xs.append(x); ys.append(y)
     print('places with names:', len(recs), flush=True)
+    if not args.no_wikidata:
+        wikidata_enrich(recs)
     points = shapely.points(np.array(xs), np.array(ys))
 
     pref_idx = assign(points, adm['4'], nearest=True)
@@ -207,7 +251,7 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     index = {'v': 1, 'built': args.built, 'license': 'ODbL 1.0', 'attribution': '© OpenStreetMap contributors',
-             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain', 'sub', 'desc'],
+             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain', 'sub', 'desc', 'brand'],
              'total': 0, 'prefs': {}}
     for ko, jp, slug in PREFS:
         rows = by_pref.get(jp, [])
@@ -223,7 +267,7 @@ def main():
                 ci = cmap[key]
                 cities[ci][2] += 1
             # id,name,alt,kind,cuisine,lat,lon,city,ward,hours,web,chain
-            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9], r[10], r[11]])
+            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9], r[10], r[11], r[12]])
         kinds = collections.Counter(r[3] for r in out_rows)
         lats = [r[5] for r in out_rows] or [0]
         lons = [r[6] for r in out_rows] or [0]
