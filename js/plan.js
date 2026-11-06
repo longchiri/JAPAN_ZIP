@@ -327,7 +327,7 @@ function planDayOSM(doc,slug,k,last,used,keepTimes){
       for(const r of doc.rows){
         if(!pass.includes(r[3])||used.has(r[0]))continue;
         const d=dist(prev.lat,prev.lon,r[5],r[6]);if(d>40)continue;
-        let s=d+(r[7]===city?0:1.5)+(r[11]?0.8:0)+(r[9]?0:0.3);
+        let s=d+(r[7]===city?0:1.5)+(r[11]?0.8:0)+(r[9]?0:0.3)-(isAwarded(doc,r)?1.2:0);
         if(t==='12:00'||t==='18:00'){if(themeRe&&prefs.theme!=='food'&&!themeRe.test((r[4]||'').toLowerCase()))s+=2;if(prefs.genre!=='전체'&&genreOf(r)!==prefs.genre)s+=3}
         if(s<bs){bs=s;best=r}
       }
@@ -337,9 +337,46 @@ function planDayOSM(doc,slug,k,last,used,keepTimes){
   }
   return {items:out,cityName:city>=0?doc.cities[city][0]:''};
 }
+/* ---------- 현지 평가(🏆/🏮) 이름 목록: 추천 우선순위에 사용 ---------- */
+let AWN=null;
+const normN=x=>String(x||'').toLowerCase().normalize('NFKC').replace(/[\s・･·\-‐－()（）「」『』!！?？.,、。'’"&＆]/g,'');
+fetch('data/awards.json').then(r=>r.ok?r.json():null).then(d=>{if(!d)return;const PJ=typeof JAPAN_PREF_JP!=='undefined'?JAPAN_PREF_JP:{};const KO=Object.fromEntries(Object.entries(PJ).map(([k,v])=>[v,k]));
+  AWN={};for(const s of d.shops){const ko=KO[s[1]];if(!ko)continue;const src=d.sources[s[3]]||[];(AWN[ko]??=new Map()).set(normN(s[0]),src[5]==='shinise'?'🏮':'🏆')}}).catch(()=>{});
+function isAwarded(doc,r){const m=AWN?.[doc.pref];if(!m||'omhasv'.includes(r[3]))return '';return m.get(normN(r[1]))||''}
+
+/* ---------- 내가 바꾼 일정 장소 (DAY·시간 기준으로 저장) ---------- */
+const EDIT_KEY='jz-plan-edits-v14';
+let EDITS=st.get(EDIT_KEY,{});if(typeof EDITS!=='object'||Array.isArray(EDITS))EDITS={};
+try{jzSuggestedEdits={};jzRememberEdits()}catch(e){}
+const saveEdits=()=>st.set(EDIT_KEY,EDITS);
+const rowById=(slug,id)=>{const d=docs.get(slug);if(!d)return null;if(!d._byId)d._byId=new Map(d.rows.map(r=>[r[0],r]));return d._byId.get(id)||null};
+function placeFromId(id){
+  if(String(id).startsWith('osm:')){const [,slug,rid]=id.split(':');const r=rowById(slug,rid);return r?{row:r,slug}:null}
+  const p=(typeof DATA!=='undefined'?DATA:[]).find(x=>x.id===id);return p?{cur:p}:null;
+}
+// 추천 도감 장소는 좌표가 없어서, 같은 이름의 전체 가게(OSM)에서 좌표를 찾아 씀
+function coordOf(p){
+  if(p.lat!=null)return {lat:p.lat,lon:p.lon};
+  if(p._co!==undefined)return p._co;
+  const doc=docs.get(SLUG[p.pref]);if(!doc){return null}
+  if(!doc._byName){doc._byName=new Map();for(const r of doc.rows){const k=normN(r[1]);if(!doc._byName.has(k))doc._byName.set(k,r)}}
+  const r=doc._byName.get(normN(p.jp))||doc._byName.get(normN(p.name));
+  p._co=r?{lat:r[5],lon:r[6]}:null;return p._co;
+}
+function applyEditsAndDistances(cards){
+  cards.forEach((day,i)=>{
+    day.items.forEach(o=>{const id=EDITS[i+'|'+o.t];if(!id)return;const f=placeFromId(id);if(!f)return;
+      if(f.cur)o.p=f.cur;else{const doc=docs.get(f.slug);o.p=osmPlace(f.row,doc,f.slug,null);o.p._row=f.row;o.p._slug=f.slug}o.p._edited=true});
+    let prev=null;
+    day.items.forEach(o=>{const c=coordOf(o.p);
+      if(o.p.osm){const slug=o.p._slug||String(o.p.id).split(':')[1];const rid=String(o.p.id).split(':')[2];const r=o.p._row||rowById(slug,rid);if(r){const ed=o.p._edited;o.p=osmPlace(r,docs.get(slug),slug,prev);o.p._edited=ed;const aw=isAwarded(docs.get(slug),r);if(aw)o.p.menu=aw+' 현지 평가 · '+o.p.menu}}
+      if(c)prev=c;});
+  });
+  return cards;
+}
 const nativeBuild=buildSchedule;
 buildSchedule=function(){
-  const cards=nativeBuild();const m=mode();if(m==='cur')return cards;
+  const cards=nativeBuild();const m=mode();if(m==='cur')return applyEditsAndDistances(cards);
   const used=new Set(),perPref={};
   cards.forEach((day,i)=>{
     const pref=String(day.zone).split(' · ')[0];const slug=SLUG[pref];const doc=slug&&docs.get(slug);if(!doc)return;
@@ -348,7 +385,7 @@ buildSchedule=function(){
     else{const have=new Set(day.items.map(x=>x.t));const r=planDayOSM(doc,slug,k,last,used,have);
       if(r.items.length){const order=['10:00','12:00','14:30','18:00','20:00','출발 전'];day.items=[...day.items,...r.items].sort((a,b)=>order.indexOf(a.t)-order.indexOf(b.t))}}
   });
-  return cards;
+  return applyEditsAndDistances(cards);
 };
 
 /* ---------- 일정 화면: 모드 선택 + 하루 동선 지도 ---------- */
@@ -372,7 +409,64 @@ renderSchedule=function(){
   const box=document.createElement('div');box.className='jz-plan-source';
   box.innerHTML=`<label for="jzPlanSource">일정에 쓸 장소</label><select id="jzPlanSource"><option value="mix">⭐ 추천 도감 우선 + 빈 칸은 📋 전체 가게</option><option value="osm">📋 전체 가게로 가까운 동선 짜기 (시골 추천)</option><option value="cur">⭐ 추천 도감만</option></select><span class="tiny" id="jzPlanSourceInfo"></span>`;
   anchor.after(box);const sel=q('#jzPlanSource');sel.value=mode();
-  sel.addEventListener('change',()=>{st.set(MODE_KEY,sel.value);try{jzSuggestedEdits={};jzRememberEdits()}catch(e){}renderSchedule()});
+  sel.addEventListener('change',()=>{st.set(MODE_KEY,sel.value);EDITS={};saveEdits();renderSchedule()});
+  q('#replan')?.addEventListener('click',()=>{EDITS={};saveEdits()},true);
+  q('#jzResetSuggested')?.addEventListener('click',()=>{EDITS={};saveEdits();setTimeout(renderSchedule,0)});
+})();
+
+/* ---------- ✏️ 수정 · 근처 장소 찾기 (실제 거리 기준) ---------- */
+(function nearbyEditor(){
+  const dlg=q('#jzSuggestDialog'),days=q('#days');if(!dlg||!days)return;
+  const scope=q('#jzSuggestScope'),genreSel=q('#jzSuggestGenre'),qi=q('#jzSuggestQuery'),res=q('#jzSuggestResults'),sum=q('#jzSuggestSummary');
+  scope.innerHTML='<option value="0.5">반경 500m</option><option value="1" selected>반경 1km</option><option value="3">반경 3km</option><option value="10">반경 10km</option><option value="999">같은 도도부현 전체</option>';
+  const lab=scope.closest('label');if(lab&&lab.firstChild&&lab.firstChild.nodeType===3)lab.firstChild.textContent='거리 범위';
+  if(!q('#jzNearSort')){const l=document.createElement('label');l.innerHTML='정렬<select id="jzNearSort"><option value="aw">🏆🏮 현지 평가·노포 먼저</option><option value="dist">가까운 순</option></select>';genreSel.closest('label').after(l)}
+  const sortSel=q('#jzNearSort');
+  let cur=null;
+  async function open(i,j){
+    const cards=buildSchedule();const item=cards[i]?.items[j];if(!item)return;
+    const p=item.p;const slug=SLUG[p.pref];
+    if(slug&&!docs.has(slug)&&/^https?:$/.test(location.protocol)){sum.textContent='📋 '+p.pref+' 가게 데이터를 불러오는 중…';try{const r=await fetch('data/osm/'+slug+'.json');if(r.ok)docs.set(slug,await r.json())}catch(e){}}
+    let c=coordOf(p);
+    // 좌표가 없는 추천 도감 장소 → 같은 날 앞·뒤 일정 장소 위치를 기준으로
+    if(!c){const its=cards[i].items;for(const k of [j-1,j+1,j-2,j+2]){const o=its[k];const oc=o&&coordOf(o.p);if(oc){c={lat:oc.lat,lon:oc.lon,approx:'near'};break}}}
+    if(!c){const doc=docs.get(slug);if(doc){const ci=doc.cities.findIndex(x=>String(p.area||'').includes(x[0])||(x[1]&&String(p.area||'').includes(String(x[1]).replace(/(시|정|촌|구)$/,''))));const rows=doc.rows.filter(r=>ci<0||r[7]===ci);if(rows.length){const la=rows.map(r=>r[5]).sort((a,b)=>a-b),lo=rows.map(r=>r[6]).sort((a,b)=>a-b);c={lat:la[la.length>>1],lon:lo[lo.length>>1],approx:true}}}}
+    cur={i,j,t:item.t,p,slug,c};
+    q('#jzSuggestHeading').textContent=p.name+' · 다른 장소로 바꾸기';
+    q('#jzSuggestContext').textContent=`DAY ${i+1} · ${item.t} · ${p.pref} ${p.area||''}`+(c?(c.approx==='near'?' · 기준 위치: 바로 앞·뒤 일정 장소':c.approx?' · 기준 위치: 동네 중심(추정)':' · 이 장소 기준 실제 거리'):' · 위치 정보 없음');
+    genreSel.value=p.genre||'';qi.value='';
+    dlg.hidden=false;document.body.style.overflow='hidden';render();
+  }
+  function render(){
+    if(!cur)return;const {p,slug,c}=cur;const doc=docs.get(slug);const R=Number(scope.value);const g=genreSel.value;const qq=qi.value.trim().toLowerCase();
+    const out=[];
+    if(doc){for(const r of doc.rows){if('sv'.includes(r[3])&&g!=='마트·쇼핑')continue;if(g&&genreOf(r)!==g)continue;
+      const d=c?dist(c.lat,c.lon,r[5],r[6]):null;if(c&&R<999&&d>R)continue;
+      if(qq){const gg=jzGuess(r);if(!(r[1]+' '+r[2]+' '+gg.label+' '+(gg.what||'')).toLowerCase().includes(qq))continue}
+      if('osm:'+slug+':'+r[0]===p.id)continue;
+      out.push({type:'osm',r,d,aw:isAwarded(doc,r)})}}
+    for(const x of (typeof DATA!=='undefined'?DATA:[])){if(x.pref!==p.pref||x.id===p.id)continue;if(g&&x.genre!==g)continue;
+      if(qq&&!(x.name+' '+x.jp+' '+x.menu+' '+x.sub).toLowerCase().includes(qq))continue;
+      const xc=coordOf(x);const d=(c&&xc)?dist(c.lat,c.lon,xc.lat,xc.lon):null;
+      if(c&&R<999){if(d==null){if(!(x.area&&p.area&&x.area===p.area))continue}else if(d>R)continue}
+      out.push({type:'cur',x,d,aw:'⭐'})}
+    const rank=o=>(sortSel.value==='aw'?(o.aw==='🏆'||o.aw==='🏮'?0:o.aw==='⭐'?1:2):0);
+    out.sort((a,b)=>rank(a)-rank(b)||((a.d??1e9)-(b.d??1e9)));
+    sum.textContent=`${out.length.toLocaleString()}곳 · ${R<999?'반경 '+(R<1?R*1000+'m':R+'km'):p.pref+' 전체'} · ${c?(c.approx==='near'?'앞·뒤 일정 장소 기준 거리':c.approx?'동네 중심 기준 거리(추정)':'현재 장소 기준 실제 거리'):'위치 정보가 없어 같은 동네 이름 기준'}`;
+    const D=d=>d==null?'':`<span class="v12-dist">📏 ${d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km'}</span>`;
+    res.innerHTML=out.slice(0,80).map((o,k)=>{
+      if(o.type==='osm'){const r=o.r;const city=(doc.cities[r[7]]?.[0]||'');
+        return `<article class="jz-suggest-item"><div class="v12-card-top">${o.aw?`<span class="tag fz-award">${o.aw} 현지 평가</span>`:''}${D(o.d)}</div><h3>${esc(r[1])}</h3><p>${esc(city)} · ${esc(KIND[r[3]]||'')}${r[9]?' · 🕒 '+esc(r[9]):''}</p>${jzMenuLine(r,city)}<div class="actions"><button class="btn dark" type="button" data-jz-pick="${esc('osm:'+slug+':'+r[0])}">이 장소로 교체</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${gmaps(r[1]+' '+city)}">지도 ↗</a></div></article>`}
+      const x=o.x;return `<article class="jz-suggest-item"><div class="v12-card-top"><span class="tag fz-star">⭐ 추천 도감</span>${D(o.d)}</div><h3>${esc(x.name)}</h3><p>${esc(x.jp||'')} · ${esc(x.area)} · ${esc(x.genre)}</p><p>🍽️ ${esc(x.menu||'')} · ${esc(x.price||'')}</p><div class="actions"><button class="btn dark" type="button" data-jz-pick="${esc(x.id)}">이 장소로 교체</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${esc(x.map)}">지도 ↗</a></div></article>`;
+    }).join('')||'<div class="jz-noresult">이 범위에 맞는 장소가 없어요. 거리 범위를 넓히거나 장소 종류를 “전체”로 바꿔 보세요.</div>';
+    q('#jzSuggestMapSearch').href=c?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((g||'グルメ')+' near '+c.lat+','+c.lon)}`:gmaps(p.jp+' '+p.pref);
+  }
+  // 기존(V11) 수정 창 대신 이 창을 연다
+  days.addEventListener('click',e=>{const b=e.target.closest('button[data-jz-edit]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();const [i,j]=b.dataset.jzEdit.split('|').map(Number);open(i,j)},true);
+  dlg.addEventListener('click',e=>{const b=e.target.closest('[data-jz-pick]');if(!b||!cur)return;e.stopPropagation();
+    EDITS[cur.i+'|'+cur.t]=b.dataset.jzPick;saveEdits();dlg.hidden=true;document.body.style.overflow='';const name=b.closest('.jz-suggest-item')?.querySelector('h3')?.textContent||'';cur=null;renderSchedule();
+    const s=q('#jzPlanEditStatus');if(s)s.textContent='✓ '+name+'(으)로 바꿨어요. 거리는 실제 위치 기준으로 다시 계산돼요.'},true);
+  [scope,genreSel,sortSel].forEach(el=>el.addEventListener('change',render));qi.addEventListener('input',render);
 })();
 
 /* ---------- 엑셀 저장 ---------- */
