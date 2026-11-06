@@ -1,0 +1,56 @@
+/* JAPAN ZIP V12 additions */
+.v12-banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:14px 0;padding:14px 16px;border:1px solid #b9d7c6;border-radius:14px;background:#eef6f0;font-size:13px}
+.v12-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:10px}
+.v12-checks label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#43584f}
+.v12-summary{margin-top:10px;font-size:14px}
+.btn.on{background:var(--forest);color:#fff;border-color:var(--forest)}
+.v12-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:16px}
+.v12-card{border:1px solid var(--line);border-radius:16px;background:#fff;padding:15px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-width:0}
+.v12-card h3{margin:2px 0 0;font-size:17px;word-break:break-word}
+.v12-card .japan{color:#6b7a73;font-size:12px}
+.v12-card-top{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.v12-card .tag{font-size:11px;padding:3px 8px;border-radius:20px;background:#eef3ee;color:#365a4d;font-weight:700}
+.v12-chain{background:#f1ece4!important;color:#7a6142!important}
+.v12-dist{margin-left:auto;font-size:12px;font-weight:800;color:var(--blue)}
+.v12-hours{font-size:12px;color:#40524a;word-break:break-word}
+.v12-open{display:inline-block;margin-left:4px;color:#1d7a46;font-weight:800}
+.v12-closed{display:inline-block;margin-left:4px;color:#8a8f8c;font-weight:700}
+.v12-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto;padding-top:6px}
+.v12-actions .btn{padding:6px 10px;font-size:12px}
+.v12-fav.on{color:#c48a14;border-color:#e3c27c}
+.v12-osm{font-size:11px;color:#6b7a73;text-decoration:underline;margin-left:auto}
+.v12-map-wrap{margin-top:14px}
+.v12-map{height:min(70vh,560px);border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.v12-toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,30px);background:#163c35;color:#fff;padding:10px 16px;border-radius:30px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:100;max-width:calc(100vw - 32px);text-align:center}
+.v12-toast.on{opacity:1;transform:translate(-50%,0)}
+.v12-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.v12-tools .card h3{margin-top:0}
+.v12-wide{grid-column:1/-1}
+.v12-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.v12-tools .control{margin-bottom:10px}
+.v12-tools input,.v12-tools select{width:100%}
+.v12-tools .v12-checks input,.v12-tools input[type=checkbox]{width:auto}
+.v12-out{padding:12px;border-radius:12px;background:#f3f7f2;font-size:14px;margin:6px 0;line-height:1.7}
+.v12-quick td{padding:5px 8px}
+.v12-checklist{list-style:none;padding:0;margin:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 16px}
+.v12-checklist li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #e3e8e0;font-size:14px}
+.v12-checklist li.done label{color:#93a19a;text-decoration:line-through}
+.v12-checklist input{width:auto!important}
+.v12-phrases{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:12px}
+.v12-phrase{display:flex;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.v12-jp{font-size:17px;font-weight:700;color:var(--forest);margin:2px 0}
+.v12-ph-btn{display:flex;flex-direction:column;gap:6px}
+.v12-ph-btn .btn{padding:6px 10px}
+.v12-allergy{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.v12-allergy .pill{display:inline-flex;align-items:center;gap:5px;font-size:13px}
+.v12-allergy input{width:auto!important}
+.v12-showcard{white-space:pre-wrap;padding:14px;border:2px dashed #d7a65f;border-radius:12px;background:#fffaf1;font-size:15px;margin:10px 0;min-height:52px}
+.v12-sos{padding-left:18px;line-height:2}
+.v12-sos a b{color:#b23a2a}
+.v12-big{position:fixed;inset:0;background:rgba(10,25,22,.86);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.v12-big[hidden]{display:none}
+.v12-big-card{background:#fff;border-radius:20px;padding:26px 22px;max-width:760px;width:100%;text-align:center}
+.v12-big-card p{font-size:clamp(24px,6vw,44px);font-weight:800;line-height:1.45;color:#112d29;margin:12px 0 20px;word-break:keep-all}
+@media(max-width:600px){.v12-two{grid-template-columns:1fr}.v12-list{grid-template-columns:1fr}}
+@media print{#osm-db,#tools,.v12-toast,.v12-banner{display:none!important}}
+@media(max-width:600px){.formgrid.v12-grid{grid-template-columns:1fr 1fr;gap:8px}.formgrid.v12-grid .control label{font-size:11px}.v12-checks{flex-direction:column;align-items:flex-start}}
