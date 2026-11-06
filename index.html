@@ -1,8 +1,22 @@
 <!DOCTYPE html>
 
 <html lang="ko"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>JAPAN ZIP 무료 운영판 V13 | 일본 전국 여행·맛집·관광 도감</title>
-<meta content="JAPAN ZIP 재팬집 — 일본 47개 도도부현의 맛집, 카페, 쇼핑, 관광명소와 여행 일정·경비를 한곳에서 찾아보세요." name="description"/>
+<title>JAPAN_ZIP | 여행 일정부터 맛집·관광지 추천까지</title>
+<meta content="여행 일정부터 맛집·관광지 추천까지. 일본 47개 도도부현의 식당·카페·술집·관광명소를 찾고, 내 일정표를 만들어 엑셀·PDF로 저장하세요." name="description"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="JAPAN_ZIP"/>
+<meta property="og:title" content="JAPAN_ZIP | 여행 일정부터 맛집·관광지 추천까지"/>
+<meta property="og:description" content="여행 일정부터 맛집·관광지 추천까지. 일본 47개 도도부현의 식당·카페·술집·관광명소를 찾고, 내 일정표를 만들어 엑셀·PDF로 저장하세요."/>
+<meta property="og:url" content="https://longchiri.github.io/JAPAN_ZIP/"/>
+<meta property="og:image" content="https://longchiri.github.io/JAPAN_ZIP/icons/og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:locale" content="ko_KR"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="JAPAN_ZIP | 여행 일정부터 맛집·관광지 추천까지"/>
+<meta name="twitter:description" content="여행 일정부터 맛집·관광지 추천까지. 일본 47개 도도부현의 식당·카페·술집·관광명소를 찾고, 내 일정표를 만들어 엑셀·PDF로 저장하세요."/>
+<meta name="twitter:image" content="https://longchiri.github.io/JAPAN_ZIP/icons/og.png"/>
+
 <style>
 :root{--forest:#163c35;--deep:#112d29;--leaf:#2d6659;--accent:#d7a65f;--bg:#faf9f5;--surface:#fff;--line:#e2e5dc;--muted:#5f6d68;--soft:#edf4ee;--blue:#375f93;--radius:18px;--shadow:0 8px 30px rgba(22,46,40,.06)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:#25332e;font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.56;font-size:15px}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #7db7a6;outline-offset:2px}button:disabled{cursor:default;opacity:.55}
@@ -452,7 +466,7 @@ $('#bigcount').textContent=DATA.length;$('#discoveryCount').textContent=DATA.len
   if(toggle)toggle.setAttribute('aria-expanded','false');
   if(!opts.fromHash){const h=(name&&viewAliases[name]===current)?name:current;if(location.hash!=='#'+h)history.pushState(null,'','#'+h);}
   if(!opts.noScroll){const anchor=document.getElementById(name);const first=sections.find(x=>!x.hidden);if(anchor&&anchor.matches('section.zip-view')&&anchor!==first)setTimeout(()=>anchor.scrollIntoView({behavior:'instant',block:'start'}),0);else window.scrollTo({top:0,behavior:'instant'});}
-  document.title='JAPAN ZIP | '+({home:'일본 전국 여행 도감',planner:'여행 일정',directory:'맛집·장소 도감','food-guide':'지역별 먹거리',explore:'전국 추가 검색',budget:'여행 경비',sources:'출처·이용 안내',find:'장소 찾기',tools:'여행 도구'}[current]||'일본 여행');
+  document.title='JAPAN_ZIP | '+({home:'여행 일정부터 맛집·관광지 추천까지',planner:'여행 일정',directory:'맛집·장소 도감','food-guide':'지역별 먹거리',explore:'전국 추가 검색',budget:'여행 경비',sources:'출처·이용 안내',find:'장소 찾기',tools:'여행 도구'}[current]||'일본 여행');
  }
  document.querySelectorAll('[data-go],[data-open]').forEach(el=>el.addEventListener('click',event=>{
   event.preventDefault(); navigate(el.dataset.go||el.dataset.open);
