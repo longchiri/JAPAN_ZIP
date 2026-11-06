@@ -149,7 +149,9 @@ function buildPlaces(){
   const towns=window.JZIP_TOWNS||{};
   for(const [p,list] of Object.entries(towns))for(const t of list)push({type:'town',pref:p,name:t,keys:[norm(t)]});
   if(typeof DATA!=='undefined')for(const d of DATA)if(d.area&&d.pref)push({type:'town',pref:d.pref,name:d.area,keys:[norm(d.area)]});
-  F.places=out;
+  // 같은 현에 같은 이름의 시정촌(또는 현 자체)이 있으면 동네 항목은 중복이므로 숨김
+  const cityKeys=new Set(out.filter(o=>o.type==='city'||o.type==='pref').map(o=>o.pref+'|'+norm(stripSuffix(o.type==='city'?(o.ko||o.city):o.pref))));
+  F.places=out.filter(o=>o.type!=='town'||!cityKeys.has(o.pref+'|'+norm(stripSuffix(o.name))));
 }
 function cuisineMatches(q){const n=norm(q);if(!n)return [];const res=[];const seen=new Set();for(const [k,v] of Object.entries(CUISINE)){if(seen.has(v))continue;if(norm(v).startsWith(n)||k.startsWith(n)){seen.add(v);res.push([k,v])}}return res.slice(0,2)}
 let SUG=[];
@@ -157,7 +159,7 @@ function suggest(){
   const q=$('fzQ').value.trim();const box=$('fzSug');
   if(!q){hideSug();return}
   if(!F.places)buildPlaces();
-  const n=norm(q);const score=o=>{let b=99;for(const k of o.keys){if(!k)continue;if(k===n)b=Math.min(b,0);else if(k.startsWith(n))b=Math.min(b,1);else if(k.includes(n))b=Math.min(b,3)}return b+({region:0,pref:0,city:.5,town:.7}[o.type]||1)};
+  const n=norm(q);const score=o=>{let b=99;for(const k of o.keys){if(!k)continue;if(k===n)b=Math.min(b,0);else if(k.startsWith(n))b=Math.min(b,1);else if(k.includes(n))b=Math.min(b,3)}return b+({region:0,pref:0,city:.5,town:.7}[o.type]??1)};
   const hits=F.places.map(o=>[o,score(o)]).filter(x=>x[1]<50).sort((a,b)=>a[1]-b[1]||(b[0].n||0)-(a[0].n||0)).slice(0,8).map(x=>x[0]);
   SUG=[];
   for(const h of hits)SUG.push({kind:'place',o:h});
