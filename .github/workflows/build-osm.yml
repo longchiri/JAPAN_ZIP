@@ -1,0 +1,63 @@
+name: Build OSM restaurant DB
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 18 1 * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-osm
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y osmium-tool
+          python3 -m pip install --upgrade "shapely>=2.0" numpy
+
+      - name: Download Japan extract (Geofabrik)
+        run: |
+          mkdir -p /tmp/osm
+          curl -fL --retry 3 -o /tmp/osm/japan.osm.pbf https://download.geofabrik.de/asia/japan-latest.osm.pbf
+          ls -lh /tmp/osm
+
+      - name: Filter food / spots and boundaries
+        working-directory: /tmp/osm
+        run: |
+          osmium tags-filter japan.osm.pbf \
+            nwr/amenity=restaurant,cafe,fast_food,bar,pub,izakaya,food_court,ice_cream,biergarten,public_bath \
+            nwr/shop=bakery,confectionery,pastry,supermarket,deli,seafood,convenience \
+            nwr/tourism=attraction,museum,viewpoint,theme_park,zoo,aquarium,gallery \
+            nwr/natural=hot_spring nwr/historic=castle \
+            -o food.osm.pbf --overwrite
+          osmium export food.osm.pbf -f geojsonseq -a type,id \
+            --geometry-types=point,polygon -o food.geojsonseq --overwrite
+          osmium tags-filter japan.osm.pbf r/boundary=administrative -o boundary.osm.pbf --overwrite
+          osmium tags-filter boundary.osm.pbf r/admin_level=4,7,8 -o admin.osm.pbf --overwrite
+          osmium export admin.osm.pbf -f geojsonseq --geometry-types=polygon -o admin.geojsonseq --overwrite
+          rm -f japan.osm.pbf boundary.osm.pbf
+          ls -lh
+
+      - name: Build per-prefecture JSON
+        run: |
+          python3 scripts/build_osm.py --food /tmp/osm/food.geojsonseq --admin /tmp/osm/admin.geojsonseq --out data/osm
+          du -sh data/osm
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add data/osm
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "chore(data): OSM 전국 음식점 DB 갱신 $(date -u +%Y-%m-%d)"
+          git push
