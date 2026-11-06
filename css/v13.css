@@ -114,3 +114,7 @@ a.tag.fz-award:hover{text-decoration:underline}
 .fz-curwrap{border:1px dashed #d8d2c2;border-radius:14px;padding:12px 14px;margin-top:22px}
 .fz-curwrap>summary{cursor:pointer;font-weight:800;font-size:17px;color:#5b4a2a}
 .fz-curwrap[open]>summary{margin-bottom:8px}
+.v12-card .tag.fz-shinise{background:#ffe9e0;color:#9a3412;text-decoration:none}
+.v12-card .tag.fz-founded{background:#f3efe6;color:#6b5a3a}
+.fz-shinise-line{background:#fff6f0}
+#fzAwType{margin:6px 0 2px}
