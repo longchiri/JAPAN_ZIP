@@ -75,7 +75,7 @@ const CATS=[
  ['spot','⛩️ 관광·온천',['o','m','h','a'],['볼거리·체험']]
 ];
 const CUR_FAV_KEY='japan-atlas-faves';
-const F={index:null,indexErr:'',region:'',pref:'',city:'',ward:'',cat:'all',kind:'',cuisine:'',kw:'',hours:false,open:false,nochain:false,sort:'name',
+const F={index:null,indexErr:'',region:'',pref:'',city:'',ward:'',cat:'all',kind:'',cuisine:'',kw:'',food:'',lt:'',shownAw:9,hours:false,open:false,nochain:false,sort:'name',
   fav:false,curArea:'',showAllCities:false,cityFilter:'',filtersOpen:false,doc:null,docs:new Map(),osm:[],cur:[],curNote:'',shownOsm:40,shownCur:6,user:null,map:null,cluster:null,mapOn:false,places:null};
 const regionOf=p=>Object.keys(REGIONS).find(r=>REGIONS[r].includes(p))||'';
 const curFavs=()=>new Set(store.get(CUR_FAV_KEY,[]));
@@ -90,6 +90,8 @@ function fzShell(){
     <div id="fzWhere" class="fz-where" role="navigation" aria-label="선택한 지역"></div>
     <div id="fzPicker" class="fz-picker"></div>
     <div class="fz-cats"><div class="fz-chips" id="fzCats" role="group" aria-label="종류"></div><button class="btn" id="fzFilterBtn" type="button" aria-expanded="false">⚙️ 필터</button></div>
+    <div class="fz-row" id="fzFoodRow"><div class="fz-label">🍽️ 뭐 먹을까? <small>(가게 종류 기준 · 추정)</small></div><div class="fz-chips fz-food" id="fzFood" role="group" aria-label="음식 분류"></div></div>
+    <div class="fz-row" id="fzLTRow"><div class="fz-chips" id="fzLT" role="group" aria-label="로컬·관광객"></div></div>
     <div id="fzActive" class="fz-active"></div>
     <div id="fzFilters" class="fz-filters" hidden>
       <div class="control"><label for="fzCuisine">요리 장르</label><select id="fzCuisine"></select></div>
@@ -102,7 +104,8 @@ function fzShell(){
     <div id="fzStatus" class="tiny" role="status"></div>
   </div>
   <div id="fzMapWrap" class="v12-map-wrap" hidden><div id="fzMap" class="v12-map"></div><p class="tiny">지도 © OpenStreetMap contributors · 지도에는 📋 전체 가게만 표시돼요 (추천 장소는 좌표 정보가 없음).</p></div>
-  <section class="fz-block" id="fzCurBlock"><div class="fz-block-head"><h2 id="fzCurTitle">⭐ JAPAN ZIP 추천</h2><p class="tiny" id="fzCurSub">직접 고른 장소 · 메뉴·가격·설명 포함 · 카드를 누르면 상세 정보</p></div><div class="v12-list" id="fzCur"></div><div class="fz-more"><button class="btn" id="fzCurMore" type="button" hidden>추천 더 보기</button></div></section>
+  <section class="fz-block" id="fzAwBlock"><div class="fz-block-head"><h2 id="fzAwTitle">🏆 현지 평가 추천</h2><p class="tiny" id="fzAwSub">타베로그 百名店(일본 현지인 평점 상위 가게를 장르별로 선정)·미쉐린 빕구르망 등 공개 선정 목록 기준이에요. 리뷰 원문이 아니라 선정 사실만 표시해요.</p></div><div class="v12-list" id="fzAw"></div><div class="fz-more"><button class="btn dark" id="fzAwMore" type="button" hidden>더 보기</button></div></section>
+  <details class="fz-block fz-curwrap" id="fzCurBlock"><summary><span id="fzCurTitle">⭐ JAPAN ZIP 기존 추천</span> <small class="tiny">열기/닫기</small></summary><p class="tiny" id="fzCurSub">직접 고른 장소 · 메뉴·가격·설명 포함 · 카드를 누르면 상세 정보</p><div class="v12-list" id="fzCur"></div><div class="fz-more"><button class="btn" id="fzCurMore" type="button" hidden>추천 더 보기</button></div></details>
   <section class="fz-block" id="fzOsmBlock"><div class="fz-block-head"><h2 id="fzOsmTitle">📋 전체 가게</h2><p class="tiny">OpenStreetMap 공개 지도 데이터 · 이름·종류·영업시간·위치</p></div><div class="v12-list" id="fzOsm"></div><div class="fz-more"><button class="btn dark" id="fzOsmMore" type="button" hidden>더 보기</button></div>
    <div class="section-note">📋 데이터 출처: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> (ODbL). 누구나 편집하는 공개 지도라서 폐업·이전·영업시간 변경이 늦게 반영될 수 있고, 일부 시골은 등록된 가게가 적어요. 방문 전 구글 지도에서 확인하세요.</div></section>`;
   $('fzCats').innerHTML=CATS.map(c=>`<button type="button" class="pill" data-cat="${c[0]}">${c[1]}</button>`).join('');
@@ -121,7 +124,11 @@ function fzShell(){
   $('fzPicker').addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;const [t,v]=[b.dataset.pick,b.dataset.v];F.fav=false;
     if(t==='region'){F.region=v;refresh()}else if(t==='pref'){choosePref(v)}else if(t==='city'){F.city=v;F.ward='';F.curArea='';refresh()}else if(t==='ward'){F.ward=v;refresh()}else if(t==='allcities'){F.showAllCities=!F.showAllCities;renderPicker()}});
   $('fzPicker').addEventListener('input',e=>{if(e.target.id==='fzCityFilter'){F.cityFilter=e.target.value;renderPicker();const i=$('fzCityFilter');i.focus();i.setSelectionRange(i.value.length,i.value.length)}});
-  $('fzCats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;F.cat=b.dataset.cat;F.kind='';F.fav=false;refresh()});
+  $('fzCats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;F.cat=b.dataset.cat;F.kind='';F.fav=false;if(F.cat==='spot'||F.cat==='mart'){F.food='';F.lt=''}refresh()});
+  $('fzFood').addEventListener('click',e=>{const b=e.target.closest('[data-food]');if(!b)return;F.food=F.food===b.dataset.food?'':b.dataset.food;F.fav=false;refresh()});
+  $('fzLT').addEventListener('click',e=>{const b=e.target.closest('[data-lt]');if(!b)return;F.lt=b.dataset.lt;F.fav=false;refresh()});
+  $('fzAwMore').addEventListener('click',()=>{F.shownAw+=12;renderAw()});
+  $('fzAw').addEventListener('click',onAwClick);
   $('fzFilterBtn').addEventListener('click',()=>{F.filtersOpen=!F.filtersOpen;$('fzFilters').hidden=!F.filtersOpen;$('fzFilterBtn').setAttribute('aria-expanded',String(F.filtersOpen))});
   $('fzCuisine').addEventListener('change',e=>{F.cuisine=e.target.value;refresh()});
   $('fzKind').addEventListener('change',e=>{F.kind=e.target.value;refresh()});
@@ -159,7 +166,7 @@ function suggest(){
   const q=$('fzQ').value.trim();const box=$('fzSug');
   if(!q){hideSug();return}
   if(!F.places)buildPlaces();
-  const n=norm(q);const score=o=>{let b=99;for(const k of o.keys){if(!k)continue;if(k===n)b=Math.min(b,0);else if(k.startsWith(n))b=Math.min(b,1);else if(k.includes(n))b=Math.min(b,3)}return b+({region:0,pref:0,city:.5,town:.7}[o.type]??1)};
+  const n0=norm(q),n=(n0.length>2?n0.replace(/(도|부|현|都|府|県)$/,''):n0)||n0;const score=o=>{let b=99;for(const k of o.keys){if(!k)continue;if(k===n)b=Math.min(b,0);else if(k.startsWith(n))b=Math.min(b,1);else if(k.includes(n))b=Math.min(b,3)}return b+({region:0,pref:0,city:.5,town:.7}[o.type]??1)};
   const hits=F.places.map(o=>[o,score(o)]).filter(x=>x[1]<50).sort((a,b)=>a[1]-b[1]||(b[0].n||0)-(a[0].n||0)).slice(0,8).map(x=>x[0]);
   SUG=[];
   for(const h of hits)SUG.push({kind:'place',o:h});
@@ -209,7 +216,7 @@ async function choosePref(ko,silent){
 }
 
 /* ---------- 화면 갱신 ---------- */
-function refresh(){F.shownCur=6;F.shownOsm=40;renderWhere();renderPicker();renderCats();renderFilters();compute();renderCur();renderOsm();renderStatus();updateG();if(F.mapOn)drawMap()}
+function refresh(){F.shownCur=6;F.shownOsm=40;F.shownAw=9;if(F.doc&&AW)matchAwards(F.doc);renderWhere();renderPicker();renderCats();renderFilters();renderFoodLT();compute();renderAw();renderCur();renderOsm();renderStatus();updateG();if(F.mapOn)drawMap()}
 function cityLabel(ci){const c=F.doc?.cities?.[+ci];return c?c[0]+(c[1]?' ('+c[1]+')':''):''}
 function renderWhere(){
   const parts=[`<button type="button" data-crumb="jp" class="${!F.region?'on':''}">📍 일본 전국</button>`];
@@ -268,6 +275,8 @@ function compute(){
   if(F.cuisine)rows=rows.filter(r=>r[4]&&r[4].toLowerCase().split(';').map(x=>x.trim()).includes(F.cuisine));
   if(F.kw){const q=F.kw;rows=rows.filter(r=>(r[1]+' '+r[2]+' '+r[4]+' '+(window.jzGuess?.(r)?.label||'')+' '+(r[4]||'').split(';').map(c=>cuisineKo(c.trim().toLowerCase())).join(' ')).toLowerCase().includes(q))}
   if(F.hours)rows=rows.filter(r=>r[9]);if(F.open)rows=rows.filter(r=>openNow(r[9])===true);if(F.nochain)rows=rows.filter(r=>!r[11]);
+  if(F.food&&window.jzFoodCats)rows=rows.filter(r=>window.jzFoodCats(r).has(F.food));
+  if(F.lt)rows=rows.filter(r=>ltOf(r,F.doc)===F.lt);
   if(F.user)rows.forEach(r=>r._d=distKm(F.user.lat,F.user.lon,r[5],r[6]));
   if(F.sort==='dist'&&F.user)rows=[...rows].sort((a,b)=>a._d-b._d);else if(F.sort==='city')rows=[...rows].sort((a,b)=>a[7]-b[7]||a[1].localeCompare(b[1],'ja'));else rows=[...rows].sort((a,b)=>a[1].localeCompare(b[1],'ja'));
   F.osm=rows;
@@ -279,6 +288,7 @@ function compute(){
   const text=p=>(p.name+' '+p.jp+' '+p.area+' '+p.sub+' '+p.genre+' '+p.menu+' '+p.desc).toLowerCase();
   if(F.kw)cur=cur.filter(p=>text(p).includes(F.kw));
   if(cuisineKw)cur=cur.filter(p=>text(p).includes(cuisineKw.toLowerCase()));
+  if(F.food&&window.jzFoodCatsText)cur=cur.filter(p=>window.jzFoodCatsText(p.name+' '+p.jp+' '+p.sub+' '+p.menu+' '+p.genre).has(F.food));
   F.curNote='';
   const area=F.curArea||(F.city!==''&&F.city!=='-1'&&F.doc?(F.doc.cities[+F.city]||[]):null);
   if(area){
@@ -306,6 +316,7 @@ function renderCur(){
   if(F.fav){list=(typeof DATA!=='undefined'?DATA:[]).filter(p=>favSet.has(p.id));title='⭐ 저장한 추천 장소'}
   else title+=F.pref?` · ${F.pref}`:F.region?` · ${F.region}`:' · 전국';
   $('fzCurTitle').textContent=title+' ('+fmt(list.length)+')';
+  if(F.fav)$('fzCurBlock').open=true;
   $('fzCurSub').textContent=F.curNote||'직접 고른 장소 · 메뉴·가격·설명 포함 · 카드를 누르면 상세 정보';
   $('fzCur').innerHTML=list.length?list.slice(0,F.shownCur).map(p=>curCard(p,favSet)).join(''):`<div class="placeholder"><b>${F.fav?'저장한 추천 장소가 없어요.':'이 조건의 추천 장소가 없어요.'}</b><p>${F.fav?'추천 카드의 ☆를 누르면 여기에 모여요.':'아래 📋 전체 가게에서 찾아보세요.'}</p></div>`;
   $('fzCurMore').hidden=list.length<=F.shownCur;$('fzCurMore').textContent='추천 더 보기 ('+fmt(Math.min(F.shownCur,list.length))+' / '+fmt(list.length)+')';
@@ -318,7 +329,7 @@ function osmCard(r,doc,slug,cityOverride){
   const dist=(F.user&&r._d!=null)?`<span class="v12-dist">📏 ${r._d<1?Math.round(r._d*1000)+'m':r._d.toFixed(1)+'km'}</span>`:'';
   const t=OSM_TYPE[r[0][0]]||'node',id=r[0].slice(1);
   return `<article class="v12-card" data-key="${esc(key)}">
-   <div class="v12-card-top"><span class="tag" style="background:${KIND_COLOR[r[3]]}1a;color:${KIND_COLOR[r[3]]}">${KIND[r[3]]||''}</span>${cs.slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}${r[11]?'<span class="tag v12-chain">체인</span>':''}${dist}</div>
+   <div class="v12-card-top"><span class="tag" style="background:${KIND_COLOR[r[3]]}1a;color:${KIND_COLOR[r[3]]}">${KIND[r[3]]||''}</span>${cs.slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}${r[11]?'<span class="tag v12-chain">체인</span>':''}${ltBadge(r,doc)}${awBadge(r,doc)}${dist}</div>
    <h3>${esc(r[1])}</h3>${r[2]?`<div class="japan">${esc(r[2])}</div>`:''}
    <div class="tiny">📍 ${esc(doc?.pref||'')} ${esc(city)}${cityKo?' ('+esc(cityKo)+')':''}</div>${window.jzMenuLine?window.jzMenuLine(r,city||doc?.jp||''):''}
    ${r[9]?`<div class="v12-hours">🕒 ${esc(hoursKo(r[9]))} ${badge}</div>`:'<div class="v12-hours tiny">🕒 영업시간 정보 없음 — 지도에서 확인</div>'}
@@ -350,12 +361,121 @@ function renderOsm(){
   el.innerHTML=rows.length?rows.slice(0,F.shownOsm).map(r=>osmCard(r,F.doc,SLUG[F.pref])).join(''):'<div class="placeholder"><b>조건에 맞는 가게가 없어요.</b><p>필터를 풀거나 종류를 “전체”로 바꿔 보세요. 등록이 적은 시골은 “구글 지도에서 더 찾기”를 이용하세요.</p></div>';
   $('fzOsmMore').hidden=rows.length<=F.shownOsm;$('fzOsmMore').textContent='더 보기 ('+fmt(Math.min(F.shownOsm,rows.length))+' / '+fmt(rows.length)+')';
 }
+/* ---------- 🍽️ 음식 분류 · 🏠 로컬/🧳 관광객 ---------- */
+const LT_CELL=0.004;
+function ltOf(r,doc){
+  if(r._lt!==undefined)return r._lt;
+  if(!doc||!doc.rows||'omhasv'.includes(r[3])){r._lt='';return ''}
+  if(!doc._lt){const g=new Map();for(const x of doc.rows){if(!'omha'.includes(x[3]))continue;const k=Math.floor(x[5]/LT_CELL)+'|'+Math.floor(x[6]/LT_CELL);g.set(k,(g.get(k)||0)+1)}doc._lt=g}
+  const a=Math.floor(r[5]/LT_CELL),b=Math.floor(r[6]/LT_CELL);let n=0;
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)n+=doc._lt.get((a+i)+'|'+(b+j))||0;
+  let s=0;if(r[2])s+=2;if(n>=6)s+=2;else if(n>=2)s+=1;
+  r._lt=(s>=3||n>=12)?'tourist':(s===0&&!r[11])?'local':'';return r._lt;
+}
+function ltBadge(r,doc){const t=ltOf(r,doc);return t==='local'?'<span class="tag fz-local">🏠 로컬(추정)</span>':t==='tourist'?'<span class="tag fz-tourist">🧳 관광객 많음(추정)</span>':''}
+function renderFoodLT(){
+  const show=!F.fav&&F.cat!=='spot'&&F.cat!=='mart';
+  $('fzFoodRow').hidden=!show||!window.JZ_FOODCATS;$('fzLTRow').hidden=!show||!F.doc;
+  if(!show)return;
+  const base=osmBase();const cnt={};
+  if(window.jzFoodCats)for(const r of base)for(const k of window.jzFoodCats(r))cnt[k]=(cnt[k]||0)+1;
+  $('fzFood').innerHTML=(window.JZ_FOODCATS||[]).map(([k,l])=>`<button type="button" class="pill ${F.food===k?'on':''}" data-food="${k}">${l}${F.doc?` <small>${fmt(cnt[k]||0)}</small>`:''}</button>`).join('');
+  if(F.doc){let lc=0,tc=0;for(const r of base){const t=ltOf(r,F.doc);if(t==='local')lc++;else if(t==='tourist')tc++}
+    $('fzLT').innerHTML=[['','전체'],['local','🏠 로컬 가게 '+fmt(lc)],['tourist','🧳 관광객 많은 곳 '+fmt(tc)]].map(([k,l])=>`<button type="button" class="pill ${F.lt===k?'on':''}" data-lt="${k}">${l}</button>`).join('')+'<span class="tiny fz-lt-note">외국어 이름 등록·주변 관광지 수·체인 여부로 추정</span>';}
+}
+/* ---------- 🏆 현지 평가 (공개 수상·선정 목록) ---------- */
+const PREF_BY_JP=Object.fromEntries(Object.entries(PREF_JP).map(([k,v])=>[v,k]));
+const normName=x=>String(x||'').toLowerCase().normalize('NFKC').replace(/[\s・･·\-‐－()（）「」『』!！?？.,、。'’"&＆]/g,'');
+let AW=null,awP=null;
+function loadAwards(){
+  if(AW)return Promise.resolve(AW);if(awP)return awP;
+  awP=fetch('data/awards.json').then(r=>r.ok?r.json():null).then(d=>{if(!d)return null;
+    AW={byPref:{},updated:d.updated};
+    for(const s of d.shops){const ko=PREF_BY_JP[s[1]];if(!ko)continue;(AW.byPref[ko]??=[]).push({name:s[0],loc:s[2]||'',src:d.sources[s[3]],cu:s[4]||'',n:normName(s[0])})}
+    return AW}).catch(()=>null);
+  return awP;
+}
+function matchAwards(doc){
+  if(doc._aw||!AW)return;doc._aw=new Map();
+  const list=AW.byPref[doc.pref]||[];const byN=new Map(),byP=new Map();
+  for(const r of doc.rows){if('omhasv'.includes(r[3]))continue;const n=normName(r[1]);if(n.length<2)continue;if(!byN.has(n))byN.set(n,[]);byN.get(n).push(r);const p2=n.slice(0,2);if(!byP.has(p2))byP.set(p2,new Set());byP.get(p2).add(n)}
+  for(const a of list){
+    let c=byN.get(a.n)||[];
+    if(!c.length&&a.n.length>=3){for(const k of byP.get(a.n.slice(0,2))||[]){if(k.startsWith(a.n)||(k.length>=3&&a.n.startsWith(k)&&!/店|館/.test(a.n.slice(k.length))))c=c.concat(byN.get(k))}}
+    if(c.length>1){const loc=a.loc.replace(/駅$/,'');const f=c.filter(r=>{const ct=doc.cities[r[7]];return ct&&(loc.includes(stripSuffix(ct[0]))||(r[8]&&loc.includes(r[8])))});if(f.length)c=f}
+    a.row=c.length&&c.length<=3?c[0]:null;
+    if(a.row){if(!doc._aw.has(a.row[0]))doc._aw.set(a.row[0],[]);doc._aw.get(a.row[0]).push(a)}
+  }
+}
+function awBadge(r,doc){const l=doc?._aw?.get(r[0]);if(!l)return '';return '<span class="tag fz-award">🏆 '+esc([...new Set(l.map(a=>a.src[0]==='미쉐린 빕구르망'?'빕구르망':'백명점'+(a.src[1]?'·'+a.src[1]:'')))].join(' / '))+'</span>'}
+const AW_CAT={'라멘':['noodle'],'초밥':['sea'],'야키니쿠':['beef'],'돈카츠':['pork','rice'],'우동':['noodle'],'소바':['noodle'],'카레':['curry'],'이자카야':['drink'],'중화요리':['asian'],'야키토리':['chicken','drink'],'교자':['asian'],'킷사텐':['sweet'],'카페':['sweet'],'빵':['sweet'],'디저트':['sweet'],'화과자·갑미':['sweet']};
+const AW_JA={'라멘':'ラーメン','초밥':'寿司','야키니쿠':'焼肉','돈카츠':'とんかつ','우동':'うどん','소바':'そば','카레':'カレー','이자카야':'居酒屋','중화요리':'中華','야키토리':'焼鳥','교자':'餃子','킷사텐':'喫茶','카페':'カフェ','빵':'パン','디저트':'ケーキ','화과자·갑미':'和菓子'};
+const AW_PRICE={'라멘':['라멘 전문점','1인 ¥1,000~1,800'],'초밥':['초밥 전문점','점심 ¥3,000~ · 저녁 ¥10,000~30,000 이상 고급점 많음'],'야키니쿠':['야키니쿠','1인 ¥5,000~15,000'],'돈카츠':['돈카츠 전문점','1인 ¥1,800~4,000'],'우동':['우동','1인 ¥500~1,500'],'소바':['소바','1인 ¥1,000~2,500'],'카레':['카레','1인 ¥1,200~2,000'],'이자카야':['이자카야','1인 ¥4,000~8,000'],'중화요리':['중화요리','점심 ¥1,500~ · 코스 ¥8,000~ 고급점 포함'],'야키토리':['야키토리','1인 ¥5,000~12,000'],'교자':['교자 전문점','1인 ¥600~1,500'],'킷사텐':['킷사텐(찻집)','1인 ¥600~1,500'],'카페':['카페','1인 ¥800~2,000'],'빵':['빵집','빵 1개 ¥300~800'],'디저트':['디저트·케이크','1인 ¥600~1,500'],'화과자·갑미':['화과자·갑미','1인 ¥300~1,500']};
+function awLine(a,place){
+  const p=AW_PRICE[a.src[1]];const mich=a.src[0]==='미쉐린 빕구르망';
+  const label=p?p[0]:(a.cu||'음식점');const price=p?p[1]:(mich?'1인 ¥5,000 이하 (빕구르망 선정 기준)':'');
+  const photo='https://www.google.com/search?tbm=isch&q='+encodeURIComponent(a.name+' '+place+' メニュー');
+  return `<div class="jz-menu-line">🍽️ <b>${esc(label)}</b>${mich&&p?' · 빕구르망은 1인 ¥5,000 이하 기준':''}${price?`<div class="jz-price">💴 대략 ${esc(price)} <small>(이 장르 선정 가게들의 대략적 가격대 · 추정)</small></div>`:''}<a class="jz-photo" target="_blank" rel="noopener noreferrer" href="${photo}">📷 메뉴 사진 보기 ↗</a></div>`;
+}
+function awCats(a){if(!a._c)a._c=new Set(AW_CAT[a.src[1]]||[...(window.jzFoodCatsText?.(a.cu+' '+a.name)||[])]);return a._c}
+const CAT_FOODS={meal:['noodle','sea','beef','pork','chicken','rice','curry','asian','western','teppan'],cafe:['sweet'],drink:['drink','chicken'],mart:[],spot:[]};
+function awardsInView(){
+  if(!AW||!F.pref)return [];
+  let list=AW.byPref[F.pref]||[];
+  if(F.city!==''&&F.city!=='-1'&&F.doc){const ci=+F.city,c=F.doc.cities[ci];list=list.filter(a=>a.row?(a.row[7]===ci&&(!F.ward||a.row[8]===F.ward)):(c&&a.loc.includes(stripSuffix(c[0]))))}
+  if(F.food)list=list.filter(a=>awCats(a).has(F.food));
+  const cm=CAT_FOODS[F.cat];if(cm)list=list.filter(a=>[...awCats(a)].some(k=>cm.includes(k)));
+  if(F.kw)list=list.filter(a=>(a.name+' '+a.src[1]+' '+a.cu+' '+a.loc).toLowerCase().includes(F.kw));
+  const m=new Map();
+  for(const a of list){const g=m.get(a.n)||[];const hit=g.find(x=>!a.loc||!x.loc||a.loc===x.loc);if(hit){hit.all.push(a);if(!hit.loc&&a.loc)hit.loc=a.loc;if(!hit.row&&a.row)hit.row=a.row}else{g.push({...a,all:[a]});m.set(a.n,g)}}
+  let out=[...m.values()].flat();
+  if(F.user)out.forEach(x=>x._d=x.row?distKm(F.user.lat,F.user.lon,x.row[5],x.row[6]):1e9);
+  out.sort((a,b)=>((F.user&&F.sort==='dist')?a._d-b._d:0)||(b.all.length-a.all.length)||(Number(!!b.row)-Number(!!a.row))||a.name.localeCompare(b.name,'ja'));
+  return out;
+}
+function awardCard(a){
+  const r=a.row,slug=SLUG[F.pref];const city=r?(F.doc.cities[r[7]]?.[0]||'')+(r[8]?' '+r[8]:''):'';
+  const seenB=new Set();const badges=a.all.filter(x=>{const k=x.src[0]+x.src[1]+x.src[2];if(seenB.has(k))return false;seenB.add(k);return true}).map(x=>`<a class="tag fz-award" target="_blank" rel="noopener noreferrer" href="${esc(x.src[3])}">🏆 ${esc(x.src[0])} ${esc(x.src[2])}${x.src[1]?' · '+esc(x.src[1]):''}${x.cu?' · '+esc(x.cu):''} ↗</a>`).join('');
+  const line=awLine(a.all.find(x=>AW_PRICE[x.src[1]])||a,city||PREF_JP[F.pref]||'');
+  const t=r?(OSM_TYPE[r[0][0]]||'node'):'';const fav=r&&favs[slug+'|'+r[0]];
+  const dist=(F.user&&r&&a._d<1e8)?`<span class="v12-dist">📏 ${a._d<1?Math.round(a._d*1000)+'m':a._d.toFixed(1)+'km'}</span>`:'';
+  return `<article class="v12-card fz-awcard" ${r?`data-key="${esc(slug+'|'+r[0])}"`:''} data-awn="${esc(a.n)}">
+   <div class="v12-card-top">${badges}${dist}</div>
+   <h3>${esc(a.name)}</h3>
+   <div class="tiny">📍 ${esc(F.pref)} ${esc(city||'')}${a.loc&&!city.includes(a.loc)?' · '+esc(a.loc):''} ${r?'<span class="fz-located">✓ 지도 위치 확인</span>':''}</div>
+   ${line}
+   ${r&&r[9]?`<div class="v12-hours">🕒 ${esc(hoursKo(r[9]))}</div>`:''}
+   <div class="v12-actions">
+    <a class="btn dark" target="_blank" rel="noopener noreferrer" href="${gmaps(a.name+' '+(PREF_JP[F.pref]||'')+' '+(a.loc||''))}">구글 지도·평점 ↗</a>
+    ${r?`<a class="btn" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${r[5]},${r[6]}">길찾기</a>`:''}
+    <button class="btn" type="button" data-aw="trip">＋ 일정</button>
+    ${r?`<button class="btn v12-fav ${fav?'on':''}" type="button" data-v12="fav" aria-label="저장">${fav?'★':'☆'}</button>`:''}
+   </div></article>`;
+}
+function renderAw(){
+  const blk=$('fzAwBlock');if(!blk)return;
+  if(F.fav||F.cat==='spot'||F.cat==='mart'){blk.hidden=true;return}
+  blk.hidden=false;
+  if(!AW){$('fzAwTitle').textContent='🏆 현지 평가 추천';$('fzAw').innerHTML='<div class="placeholder">현지 평가 목록을 불러오는 중이거나, data/awards.json 파일이 아직 없어요.</div>';$('fzAwMore').hidden=true;return}
+  if(!F.pref){$('fzAwTitle').textContent='🏆 현지 평가 추천';$('fzAw').innerHTML='<div class="placeholder"><b>지역(도도부현)을 고르면 그 지역의 현지 평가 추천 가게가 나와요.</b><p>전국 '+fmt(Object.values(AW.byPref).reduce((s,l)=>s+l.length,0))+'곳 (타베로그 백명점 16개 장르 · 미쉐린 빕구르망)</p></div>';$('fzAwMore').hidden=true;return}
+  const list=F.aw=awardsInView();
+  $('fzAwTitle').textContent=`🏆 현지 평가 추천 · ${F.pref}${F.city!==''&&F.city!=='-1'&&F.doc?' '+(F.doc.cities[+F.city]?.[0]||''):''} (${fmt(list.length)})`;
+  $('fzAw').innerHTML=list.length?list.slice(0,F.shownAw).map(awardCard).join(''):'<div class="placeholder"><b>이 조건의 현지 평가 추천 가게가 없어요.</b><p>시정촌을 전체로 바꾸거나 음식 분류를 풀어 보세요. 아래 📋 전체 가게에서 🏠 로컬 가게를 골라 볼 수도 있어요.</p></div>';
+  $('fzAwMore').hidden=list.length<=F.shownAw;$('fzAwMore').textContent='더 보기 ('+fmt(Math.min(F.shownAw,list.length))+' / '+fmt(list.length)+')';
+}
+function onAwClick(e){
+  const b=e.target.closest('[data-aw],[data-v12]');if(!b)return;const card=b.closest('.fz-awcard');
+  if(b.dataset.v12){onOsmClick(e);return}
+  const a=(F.aw||[]).find(x=>x.n===card.dataset.awn);if(!a)return;
+  const city=a.row?(F.doc.cities[a.row[7]]?.[0]||''):a.loc;
+  if(typeof window.jzAddPlace==='function'){window.jzAddPlace({id:'',name:a.name,pref:F.pref,area:city});toast('✏️ '+a.name+' → 일정 편집기에 추가했어요')}
+}
 function renderStatus(){
   const st=$('fzStatus');
   if(F.fav){st.textContent='★ 저장한 곳은 이 브라우저에 저장돼요. 다른 기기로 옮기려면 여행 도구 → 백업을 쓰세요.';return}
   const parts=[];
   if(F.index)parts.push(`📋 전국 가게 ${fmt(F.index.total)}곳 · 기준일 ${F.index.built}`);
-  parts.push(`⭐ 추천 ${fmt(F.cur.length)}곳`);
+  if(F.pref&&AW)parts.push(`🏆 현지 평가 ${fmt(F.aw?.length||0)}곳`);
   if(F.doc)parts.push(`📋 ${F.pref} 가게 ${fmt(F.osm.length)}곳`);
   st.textContent=parts.join(' · ');
 }
@@ -564,6 +684,7 @@ fzShell();toolsShell();pwa();
 const favBtn=$('zipFavorites');
 if(favBtn){const nb=favBtn.cloneNode(true);favBtn.replaceWith(nb);nb.addEventListener('click',()=>{F.fav=true;document.querySelector('a[data-go="find"]')?.click();refresh()})}
 refresh();
+loadAwards().then(()=>{if(F.doc&&AW)matchAwards(F.doc);refresh()});
 loadIndex().then(async()=>{
   const p=new URLSearchParams(location.search).get('pref');
   if(p&&SLUG[p])await choosePref(p);else refresh();
