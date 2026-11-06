@@ -1,7 +1,7 @@
 {
-  "name": "JAPAN ZIP 일본 여행 도감",
-  "short_name": "JAPAN ZIP",
-  "description": "일본 47개 도도부현 맛집·관광·일정·여행 도구",
+  "name": "JAPAN_ZIP",
+  "short_name": "JAPAN_ZIP",
+  "description": "여행 일정부터 맛집·관광지 추천까지",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
