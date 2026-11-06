@@ -118,3 +118,23 @@ a.tag.fz-award:hover{text-decoration:underline}
 .v12-card .tag.fz-founded{background:#f3efe6;color:#6b5a3a}
 .fz-shinise-line{background:#fff6f0}
 #fzAwType{margin:6px 0 2px}
+/* 한글 읽기 (일본어 가게 이름 밑) */
+.fz-ko{color:#3c6e8f;font-size:12.5px;font-weight:600;margin:2px 0 4px;letter-spacing:.01em}
+.route-content .fz-ko{margin:3px 0 2px}
+.jz-suggest-item .fz-ko{margin:-2px 0 6px}
+/* 🏨 숙소 */
+.jz-stay-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0;padding:10px 14px;border-radius:14px;background:#f1f6f3;border:1px solid #d5e3dc;font-size:14px}
+.jz-stay-bar .btn{padding:6px 12px;font-size:13px}
+#days li.jz-stay-li{background:#f5f8fb;border-radius:12px;padding-top:10px;padding-bottom:10px}
+#days li.jz-stay-li .time{color:#3c6e8f;font-weight:800;white-space:nowrap}
+.jz-stay-btn{margin-top:6px;padding:6px 12px;font-size:13px}
+.jz-stay-scope{display:flex;flex-wrap:wrap;gap:14px;margin:4px 0 10px;font-size:14px}
+.jz-stay-scope label{display:flex;align-items:center;gap:6px}
+.jz-stay-manual{margin:14px 0;padding:12px 14px;border:1px dashed #c9d6cf;border-radius:12px}
+.jz-stay-manual summary{cursor:pointer;font-weight:700}
+.jz-stay-manual label{display:block;margin:10px 0 0;font-size:13px;font-weight:700}
+.jz-stay-manual input{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:10px;border:1px solid #c9d6cf;border-radius:10px;font:inherit}
+.jz-stay-manual .btn{margin-top:10px}
+.jz-stay-foot{margin-top:10px;text-align:right}
+.jz-suggest-head #jzStayClose,.jz-suggest-head #jzSuggestClose{white-space:nowrap;flex:0 0 auto}
+#days .jz-stay-note{margin:4px 0 0;font-size:13px;color:#52695c}
