@@ -12,7 +12,7 @@ JAPAN ZIP — OpenStreetMap 전국 음식점 데이터 빌드 스크립트 (무�
 GitHub Actions(.github/workflows/build-osm.yml)가 매월 자동 실행합니다.
 데이터 © OpenStreetMap contributors, ODbL 1.0
 """
-import argparse, datetime, json, math, os, sys, collections, time, urllib.request, urllib.parse
+import argparse, datetime, json, math, os, re, subprocess, sys, collections, time, urllib.request, urllib.parse
 
 import numpy as np
 import shapely
@@ -37,6 +37,8 @@ PREFS = [  # (Korean name used by the app, Japanese name, file slug)
     ("가고시마", "鹿児島県", "kagoshima"), ("오키나와", "沖縄県", "okinawa"),
 ]
 JP2PREF = {jp: (ko, jp, slug) for ko, jp, slug in PREFS}
+
+LODGING = ('hotel', 'hostel', 'guest_house', 'motel', 'apartment')
 
 # kind code -> rule. Order matters (first match wins).
 def classify(t):
@@ -68,6 +70,8 @@ def classify(t):
         return 'h'
     if tour in ('attraction', 'viewpoint', 'theme_park', 'zoo', 'aquarium'):
         return 'a'
+    if tour in LODGING:
+        return 'l'  # 숙소 (일정표 숙소 검색용, 별도 파일로 저장)
     return None
 
 
@@ -84,15 +88,19 @@ _row('ばびぶべぼ', 'ㅂ', 'ㅂ'); _row('ぱぴぷぺぽ', 'ㅍ', 'ㅍ'); _r
 _K['や'] = ('ㅇ', 'ㅇ', 'ya'); _K['ゆ'] = ('ㅇ', 'ㅇ', 'yu'); _K['よ'] = ('ㅇ', 'ㅇ', 'yo'); _row('らりるれろ', 'ㄹ', 'ㄹ'); _K['わ'] = ('ㅇ', 'ㅇ', 'w'); _K['を'] = ('ㅇ', 'ㅇ', 'o')
 _K['ち'] = ('ㅈ', 'ㅊ', 'i'); _K['つ'] = ('ㅆ', 'ㅆ', 'eu'); _K['ぢ'] = ('ㅈ', 'ㅈ', 'i'); _K['づ'] = ('ㅈ', 'ㅈ', 'eu')
 _K['じ'] = ('ㅈ', 'ㅈ', 'i'); _K['ず'] = ('ㅈ', 'ㅈ', 'eu'); _K['す'] = ('ㅅ', 'ㅅ', 'eu')
+_K['ゐ'] = ('ㅇ', 'ㅇ', 'i'); _K['ゑ'] = ('ㅇ', 'ㅇ', 'e')
+for _sm, _v in zip('ぁぃぅぇぉ', 'aiueo'):
+    _K[_sm] = ('ㅇ', 'ㅇ', _v)
 _CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
 _JUNG = {'a': 'ㅏ', 'i': 'ㅣ', 'u': 'ㅜ', 'e': 'ㅔ', 'o': 'ㅗ', 'ya': 'ㅑ', 'yu': 'ㅠ', 'yo': 'ㅛ', 'w': 'ㅘ', 'eu': 'ㅡ'}
 _JUNGS = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'
 _JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
 def _syl(c, v, f=''):
     return chr(0xAC00 + (_CHO.index(c) * 21 + _JUNGS.index(_JUNG[v])) * 28 + _JONG.index(f))
-def kana2ko(text):
+def kana2ko(text, first=True):
     """ひらがな/カタカナ 읽기를 한글로. 장음(おう·うう·ー)은 표기하지 않음."""
     t = ''.join(chr(ord(ch) - 0x60) if 'ァ' <= ch <= 'ヶ' else ch for ch in (text or ''))
+    t = t.replace('ゔ', 'ぶ').replace('ゕ', 'か').replace('ゖ', 'け')
     out = []  # [cho, vowel, final]
     i = 0
     while i < len(t):
@@ -108,10 +116,17 @@ def kana2ko(text):
         if ch not in _K:
             return ''
         ci, cm, v = _K[ch]
-        c = ci if not out else cm
+        c = ci if (not out and first) else cm
+        if nx and nx in 'ぁぃぅぇぉ':  # ファ·ティ·ウィ 같은 외래어
+            v = {'ぁ': 'a', 'ぃ': 'i', 'ぅ': 'u', 'ぇ': 'e', 'ぉ': 'o'}[nx]
+            if ch == 'ふ':
+                c = 'ㅍ'
+            if ch in 'てで':
+                c = 'ㅌ' if ch == 'て' else 'ㄷ'
+            out.append([c, v, '']); i += 2; continue
         if nx in 'ゃゅょ' and nx:
             v = {'ゃ': 'ya', 'ゅ': 'yu', 'ょ': 'yo'}[nx]
-            if ch in 'しじちぢ':
+            if ch in 'じちぢ':
                 v = v[1:]
             i += 1
         # 장음 생략: o/u 뒤의 う, o 뒤의 お
@@ -125,6 +140,84 @@ def kana2ko(text):
         return ''.join(_syl(c, v, f) for c, v, f in out)
     except Exception:
         return ''
+# ---------- 가게 이름 한글 읽기 (SudachiPy 형태소 분석, 무료·오프라인) ----------
+JP_RE = re.compile('[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\U00020000-\U0002ffff]')
+HANGUL_RE = re.compile('[\uac00-\ud7a3]')
+_TOK = None
+def _tokenizer():
+    global _TOK
+    if _TOK is not None:
+        return _TOK
+    _TOK = False
+    for attempt in (0, 1):
+        try:
+            from sudachipy import dictionary, tokenizer as T
+            _TOK = (dictionary.Dictionary(dict='core').create(), T.Tokenizer.SplitMode.C)
+            break
+        except Exception as e:
+            if attempt == 0:
+                print('installing sudachipy for name readings…', flush=True)
+                subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'sudachipy', 'sudachidict_core'], check=False)
+                import importlib, site
+                importlib.invalidate_caches()
+                try:
+                    sys.path.extend(p for p in site.getsitepackages() + [site.getusersitepackages()] if p not in sys.path)
+                except Exception:
+                    pass
+            else:
+                print('name readings disabled:', e, flush=True)
+    return _TOK
+_READ_CACHE = {}
+def reading_ko(name, kana_hint=''):
+    """日本語 가게 이름 → 한글 읽기 (예: 牛たん炭焼 利久 → 규탄스미야키 리큐). 실패하면 ''."""
+    if not name or not JP_RE.search(name):
+        return ''
+    if kana_hint:
+        r = kana2ko(re.sub(r'[\s・･]', '', kana_hint))
+        if r:
+            return r
+    if name in _READ_CACHE:
+        return _READ_CACHE[name]
+    tk = _tokenizer()
+    res = ''
+    if tk:
+        try:
+            parts, run = [], []
+            def flush():
+                nonlocal run
+                words, cur = [], []
+                for rd in run + ['・']:
+                    for seg in re.split('([・･])', rd):
+                        if seg in ('・', '･'):
+                            if cur: words.append(cur)
+                            cur = []
+                        elif seg:
+                            cur.append(seg)
+                for w in words:
+                    k = ''.join(kana2ko(m, first=(j == 0)) or '\0' for j, m in enumerate(w))
+                    if '\0' in k:
+                        raise ValueError(w)
+                    parts.append(k + ' ')
+                run = []
+            for m in tk[0].tokenize(name, tk[1]):
+                sf = m.surface()
+                if JP_RE.search(sf):
+                    rd = m.reading_form()
+                    if not rd or not re.fullmatch('[\u30a0-\u30ff]+', rd):
+                        raise ValueError(sf)
+                    run.append(rd)
+                elif sf in '・･·':
+                    flush(); parts.append(' ')
+                else:
+                    flush(); parts.append(sf)
+            flush()
+            res = re.sub(r'\s+', ' ', ''.join(parts)).strip()
+        except Exception:
+            res = ''
+    _READ_CACHE[name] = res
+    return res
+
+
 _SUFFIX = [('区', ('く',), '구'), ('市', ('し',), '시'), ('町', ('まち', 'ちょう'), '정'), ('村', ('むら', 'そん'), '촌')]
 def ko_name(p):
     """name:ko 가 없으면 가나 읽기로 한글 이름을 만든다 (예: 中央区 + ちゅうおうく → 주오구)."""
@@ -302,7 +395,10 @@ def main():
             (t.get('description:ko') or t.get('description:ja') or t.get('description') or '')[:120],
             (t.get('brand') or t.get('brand:ja') or '')[:40],
             (t.get('wikidata') or '').strip(),
+            t.get('name:ja-Hira') or t.get('name:ja_kana') or t.get('name:ja-Kana') or '',
         ])
+        if kind == 'l' and ('旅館' in name or t.get('guest_house') == 'ryokan' or t.get('hotel') == 'ryokan'):
+            recs[-1][10] = 'ryokan'
         xs.append(x); ys.append(y)
     print('places with names:', len(recs), flush=True)
     if not args.no_wikidata:
@@ -328,13 +424,19 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     index = {'v': 1, 'built': args.built, 'license': 'ODbL 1.0', 'attribution': '© OpenStreetMap contributors',
-             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain', 'sub', 'desc', 'brand'],
+             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain', 'sub', 'desc', 'brand', 'ko'],
              'total': 0, 'prefs': {}}
     for ko, jp, slug in PREFS:
         rows = by_pref.get(jp, [])
         cities, cmap = [], {}
-        out_rows = []
+        out_rows, stay_rows = [], []
         for r, city, ward in sorted(rows, key=lambda z: (z[1]['name'] if z[1] else '~', z[0][1])):
+            # ko: 한글 이름(name:ko·위키데이터) 또는 자동 읽기
+            kr = r[2] if HANGUL_RE.search(r[2] or '') else reading_ko(r[1], r[14])
+            if r[3] == 'l':
+                # 숙소: id,name,ko,type,lat,lon,city(jp),city(ko),ward,web
+                stay_rows.append([r[0], r[1], kr, r[10], r[5], r[6], city['name'] if city else '', city['ko'] if city else '', ward if ward != (city or {}).get('name') else '', r[8]])
+                continue
             ci = -1
             if city:
                 key = city['name']
@@ -344,18 +446,22 @@ def main():
                 ci = cmap[key]
                 cities[ci][2] += 1
             # id,name,alt,kind,cuisine,lat,lon,city,ward,hours,web,chain
-            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9], r[10], r[11], r[12]])
+            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9], r[10], r[11], r[12], kr])
         kinds = collections.Counter(r[3] for r in out_rows)
         lats = [r[5] for r in out_rows] or [0]
         lons = [r[6] for r in out_rows] or [0]
         doc = {'v': 1, 'pref': ko, 'jp': jp, 'built': args.built, 'attribution': index['attribution'],
                'cities': cities, 'wards': {w: ward_ko[w] for w in sorted({r[8] for r in out_rows if r[8]}) if w in ward_ko},
                'rows': out_rows}
+        with open(os.path.join(args.out, slug + '.stay.json'), 'w', encoding='utf-8') as fh:
+            json.dump({'v': 1, 'pref': ko, 'jp': jp, 'built': args.built, 'attribution': index['attribution'],
+                       'fields': ['id', 'name', 'ko', 'type', 'lat', 'lon', 'city', 'cityKo', 'ward', 'web'], 'rows': stay_rows},
+                      fh, ensure_ascii=False, separators=(',', ':'))
         path = os.path.join(args.out, slug + '.json')
         with open(path, 'w', encoding='utf-8') as fh:
             json.dump(doc, fh, ensure_ascii=False, separators=(',', ':'))
         index['prefs'][slug] = {'ko': ko, 'jp': jp, 'count': len(out_rows), 'cities': len(cities),
-                                'kinds': dict(kinds), 'bytes': os.path.getsize(path),
+                                'kinds': dict(kinds), 'bytes': os.path.getsize(path), 'stays': len(stay_rows),
                                 'cityList': [[c[0], c[1], c[2]] for c in cities],
                                 'bbox': [min(lats), min(lons), max(lats), max(lons)]}
         index['total'] += len(out_rows)
