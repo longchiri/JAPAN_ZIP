@@ -185,6 +185,8 @@ def main():
             (t.get('opening_hours') or '')[:120],
             short_url(t.get('website') or t.get('contact:website') or t.get('url')),
             1 if (t.get('brand') or t.get('brand:wikidata')) else 0,
+            (t.get('tourism') or t.get('historic') or t.get('bath:type') or '')[:20],
+            (t.get('description:ko') or t.get('description:ja') or t.get('description') or '')[:120],
         ])
         xs.append(x); ys.append(y)
     print('places with names:', len(recs), flush=True)
@@ -205,7 +207,7 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
     index = {'v': 1, 'built': args.built, 'license': 'ODbL 1.0', 'attribution': '© OpenStreetMap contributors',
-             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain'],
+             'fields': ['id', 'name', 'alt', 'kind', 'cuisine', 'lat', 'lon', 'city', 'ward', 'hours', 'web', 'chain', 'sub', 'desc'],
              'total': 0, 'prefs': {}}
     for ko, jp, slug in PREFS:
         rows = by_pref.get(jp, [])
@@ -221,7 +223,7 @@ def main():
                 ci = cmap[key]
                 cities[ci][2] += 1
             # id,name,alt,kind,cuisine,lat,lon,city,ward,hours,web,chain
-            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9]])
+            out_rows.append([r[0], r[1], r[2], r[3], r[4], r[5], r[6], ci, ward if ward != (city or {}).get('name') else '', r[7], r[8], r[9], r[10], r[11]])
         kinds = collections.Counter(r[3] for r in out_rows)
         lats = [r[5] for r in out_rows] or [0]
         lons = [r[6] for r in out_rows] or [0]
