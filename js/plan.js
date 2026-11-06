@@ -174,11 +174,11 @@ function jzGuess(r){
     return {spot:true,icon:'📍',label:'관광명소',what:'무엇을 하는 곳인지는 📷 사진·지도에서 확인',price:'',desc};
   }
   const ch=chainOf(r);
-  if(ch){const ys=ch[3].flatMap(i=>i.slice(1).filter(Boolean));return {spot:false,chain:true,label:ch[1],what:ch[2]+' 체인',items:ch[3],checked:ch[4],source:ch[5],lo:Math.min(...ys),hi:Math.max(...ys),price:ys.length?yen(Math.min(...ys))+'~'+yen(Math.max(...ys)):'',desc}}
+  if(ch){const ys=ch[3].flatMap(i=>i.slice(1).filter(Boolean));return {spot:false,chain:true,key:'chain',ctype:ch[2],label:ch[1],what:ch[2]+' 체인',items:ch[3],checked:ch[4],source:ch[5],lo:Math.min(...ys),hi:Math.max(...ys),price:ys.length?yen(Math.min(...ys))+'~'+yen(Math.max(...ys)):'',desc}}
   let f=FOOD.find(x=>x[1].test(name));let src='name';
   if(!f){for(const t of tags){const key=TAG[t];if(key){f=FOOD.find(x=>x[0]===key);src='tag';break}}}
   if(!f&&KINDFOOD[k]){f=FOOD.find(x=>x[0]===KINDFOOD[k]);src='kind'}
-  if(f)return {spot:false,label:f[2],what:f[3],lo:f[4],hi:f[5],price:'보통 1인 '+yen(f[4])+'~'+yen(f[5]),src,desc};
+  if(f)return {spot:false,key:f[0],label:f[2],what:f[3],lo:f[4],hi:f[5],price:'보통 1인 '+yen(f[4])+'~'+yen(f[5]),src,desc};
   const o=OTHER[k]||OTHER.r;
   return {spot:false,label:o[0],what:o[1],lo:o[2],hi:o[3],price:o[2]?'보통 '+yen(o[2])+'~'+yen(o[3]):'',src:'kind',desc};
 }
@@ -194,6 +194,30 @@ function jzMenuLine(r,place){
   return `<div class="jz-menu-line">${head}${g.price?`<div class="jz-price">💴 ${escH(g.price)} <small>(이런 ${g.spot?'곳':'가게'}의 일반적인 가격대 · 추정)</small></div>`:''}${g.desc?`<div class="jz-odesc">“${escH(g.desc)}”</div>`:''}<a class="jz-photo" target="_blank" rel="noopener noreferrer" href="${photo}">📷 ${g.spot?'사진':'메뉴 사진'} 보기 ↗</a></div>`;
 }
 window.jzGuess=jzGuess;window.jzMenuLine=jzMenuLine;
+/* ---------- 🍽️ 뭐 먹을까? 음식 분류 12개 (가게 종류 기준 · 추정) ---------- */
+// [키, 이름, 가게 종류 키들, 체인 종류/텍스트 정규식, 이 분류에 넣는 OSM kind]
+const FOODCATS=[
+ ['beef','🥩 소고기',['yakiniku','gyudon','steak','gyutan','shabu','teppan'],/소고기|규동|규메시|야키니쿠|스테이크|우설|규탄|함바그|햄버그|와규|스키야키|샤부샤부|焼肉|牛/,[]],
+ ['pork','🐷 돼지고기',['tonkatsu','kushikatsu','okisoba'],/돼지|돈카츠|가츠동|쿠시카츠|생강구이|豚|とんかつ/,[]],
+ ['chicken','🍗 닭고기',['yakitori','motsunabe'],/닭|야키토리|가라아게|치킨|오야코동|미즈타키|焼鳥|焼き鳥|鶏/,[]],
+ ['sea','🐟 회·초밥·해산물',['sushi','kaiten','seafood','unagi','fugu','crab'],/초밥|스시|회전초밥|생선회|모둠회|회덮밥|사시미|해산물|생선|장어|대게|털게|게살|게 요리|굴|카이센|고마사바|寿司|鮨|海鮮|うなぎ/,[]],
+ ['noodle','🍜 면',['ramen','udon','soba','champon','okisoba'],/라멘|우동|소바|짬뽕|츠케멘|탄멘|냉면|소면|ラーメン|うどん|そば|蕎麦/,[]],
+ ['rice','🍚 밥·정식·덮밥',['teishoku','washoku','gyudon','tempura','onigiri','tonkatsu'],/정식|덮밥|규동|텐동|가츠동|오야코동|밥|오니기리|도시락|定食/,[]],
+ ['curry','🍛 카레',['curry','soupcurry','indian'],/카레|カレー/,[]],
+ ['asian','🥟 중화·한식·아시아',['chinese','korean','thai','champon'],/중화|중식|교자|만두|한식|태국|베트남|쌀국수|中華|中国|餃子/,[]],
+ ['western','🍝 양식',['italian','pizza','french','yoshoku','famires','burger','steak','kitchen','bal'],/양식|이탈리안|파스타|피자|프렌치|오므라이스|함바그|햄버거|버거|패밀리|도리아|イタリア|フランス|洋食/,[]],
+ ['teppan','🍢 철판·길거리 간식',['okonomi','takoyaki','taiyaki','crepe'],/오코노미|타코야키|몬자|타이야키|크레페|お好み|たこ焼/,[]],
+ ['drink','🍺 술·안주',['izakaya','yakitori','oden','bar','snack','bal','kushikatsu'],/술집|술과|이자카야|사케|타치노미|와인|야키토리|居酒屋|焼鳥/,['i','b','p']],
+ ['sweet','☕ 카페·디저트',['cafe','kissa','starbucks','bakery','sweets','gelato','crepe','taiyaki'],/카페|커피|디저트|빵|케이크|화과자|킷사|도넛|아이스크림|パン|カフェ|喫茶|スイーツ|和菓子/,['c','k']],
+];
+function jzFoodCats(r){
+  if(r._fc)return r._fc;
+  const g=jzGuess(r);const out=new Set();
+  if(!g.spot){for(const c of FOODCATS){if((g.key&&c[2].includes(g.key))||(g.chain&&c[3].test(g.ctype+' '+g.items.map(i=>i[0]).join(' ')))||c[4].includes(r[3]))out.add(c[0])}}
+  r._fc=out;return out;
+}
+function jzFoodCatsText(text){const out=new Set();for(const c of FOODCATS)if(c[3].test(text))out.add(c[0]);return out}
+window.JZ_FOODCATS=FOODCATS.map(c=>[c[0],c[1]]);window.jzFoodCats=jzFoodCats;window.jzFoodCatsText=jzFoodCatsText;
 {const css=document.createElement('style');css.textContent='.jz-menu-line{font-size:13px;color:#2f4a40;background:#f7faf6;border-radius:10px;padding:8px 10px;line-height:1.55}.jz-price{color:#8a6a2a;font-weight:700;font-size:12px}.jz-price small{font-weight:500;color:#9a8a6a}.jz-odesc{font-size:12px;color:#5b6b64;margin-top:2px}.jz-photo{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--blue,#375f93)}.jz-chain{background:#fff8ec;border:1px solid #f0dcb4}.jz-items{margin:4px 0 2px;padding-left:18px}.jz-items b{color:#8a5a12}.jz-price-note{font-size:11px;color:#6b7a73}.jz-price-note a{text-decoration:underline}';document.head.append(css)}
 
 if(typeof buildSchedule!=='function'||typeof renderSchedule!=='function')return;
