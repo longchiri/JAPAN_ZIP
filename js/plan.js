@@ -5,6 +5,21 @@
 // [키, 이름에 들어간 일본어, 한국어 이름, 설명, 최저가, 최고가]  가격 = 이런 종류 가게의 보통 1인 가격대 (추정)
 const FOOD=[
  ['kaiten',/回転|スシロー|くら寿司|はま寿司|かっぱ寿司|魚べい|元気寿司/,'회전초밥','접시에 담긴 초밥을 골라 먹는 곳',1000,2500],
+ ['indian',/インド|ネパール|タージ|ガネーシャ|ヒマラヤ|スパイス/,'인도·네팔 카레','난과 카레 세트 (점심 세트가 저렴)',900,1600],
+ ['thai',/タイ料理|タイ食堂|ガパオ|ベトナム|フォー|バインミー|アジアン/,'동남아 요리','태국·베트남 요리 (팟타이·쌀국수)',1000,1800],
+ ['gyutan',/牛タン|牛たん/,'우설(규탄)','우설 구이 정식',1800,3500],
+ ['champon',/ちゃんぽん|皿うどん/,'짬뽕·사라우동','나가사키 짬뽕',800,1300],
+ ['motsunabe',/もつ鍋|水炊き/,'모츠나베·미즈타키','곱창 전골·닭 전골 (2인 이상)',2000,4000],
+ ['okisoba',/沖縄そば|ソーキそば|八重山そば/,'오키나와 소바','오키나와 소바·소키 소바',700,1200],
+ ['soupcurry',/スープカレー/,'수프카레','삿포로식 수프카레',1200,2000],
+ ['fugu',/ふぐ|河豚/,'복어 요리','복어 코스·복어회',5000,15000],
+ ['crab',/かに|蟹|カニ/,'게 요리','게 코스·게 덮밥',3000,10000],
+ ['oden',/おでん/,'오뎅','오뎅과 술',1500,3500],
+ ['teppan',/鉄板焼/,'철판구이','철판 스테이크·해산물',3000,10000],
+ ['onigiri',/おにぎり|おむすび|弁当/,'오니기리·도시락','주먹밥·도시락 (포장)',200,800],
+ ['taiyaki',/たい焼|鯛焼|今川焼|大判焼/,'타이야키','붕어빵 간식',150,300],
+ ['gelato',/ソフトクリーム|ジェラート|アイス/,'아이스크림','소프트아이스크림·젤라토',350,700],
+ ['crepe',/クレープ/,'크레페','크레페 간식',500,900],
  ['ramen',/ラーメン|らーめん|らぁめん|拉麺|中華そば|つけ麺|麺屋|麺処|担々麺|一蘭|一風堂|天下一品/,'라멘','라멘·츠케멘·교자',800,1300],
  ['gyudon',/吉野家|すき家|松屋|なか卯|牛丼|天丼てんや/,'규동·덮밥','규동·덮밥 체인 (빠르고 저렴)',450,1000],
  ['famires',/ガスト|デニーズ|ジョナサン|ココス|ロイヤルホスト|びっくりドンキー|サイゼリヤ|バーミヤン/,'패밀리 레스토랑','함박·파스타·도리아 등 다양한 메뉴',700,1500],
@@ -38,6 +53,10 @@ const FOOD=[
  ['bakery',/パン|ベーカリー|ブーランジェリー|Bakery|BAKERY/,'빵집','갓 구운 빵 (개당)',200,600],
  ['sweets',/菓子|ケーキ|パティスリー|甘味|和菓子|洋菓子|団子|だんご|まんじゅう|大福/,'디저트·과자','케이크·화과자·단고',300,1500],
  ['bar',/バー|BAR|Bar/,'바','칵테일·위스키 (1인 2~3잔 기준)',2000,5000],
+ ['snack',/スナック|ラウンジ/,'스낵바','마마상이 있는 작은 술집 (자릿세 별도)',3000,6000],
+ ['bal',/バル|ワイン|ビストロ|ダイニング/,'다이닝바·와인바','와인·요리',3000,5000],
+ ['kitchen',/キッチン|レストラン|グリル|洋風/,'레스토랑(양식)','양식 요리·런치 세트',1000,2500],
+ ['washoku',/割烹|料亭|懐石|和食|御食事処|お食事処|食事処/,'일식당(와쇼쿠)','정식·회·생선구이 (고급 가게는 코스)',1200,5000],
 ];
 const TAG={ramen:'ramen',noodle:'ramen',udon:'udon',soba:'soba',sushi:'sushi',yakiniku:'yakiniku',yakitori:'yakitori',kushikatsu:'kushikatsu',izakaya:'izakaya',tonkatsu:'tonkatsu',tempura:'tempura',unagi:'unagi',eel:'unagi',shabu_shabu:'shabu',sukiyaki:'shabu',okonomiyaki:'okonomi',takoyaki:'takoyaki',curry:'curry',teishoku:'teishoku',japanese:'teishoku',seafood:'seafood',fish:'seafood',chinese:'chinese',gyoza:'chinese',korean:'korean',italian:'italian',pasta:'italian',pizza:'pizza',french:'french',steak_house:'steak',steak:'steak',western:'yoshoku',yoshoku:'yoshoku',burger:'burger',chicken:'burger',fried_chicken:'burger',beef_bowl:'gyudon',donburi:'gyudon',coffee_shop:'cafe',cake:'sweets',dessert:'sweets',wagashi:'sweets',japanese_sweets:'sweets',bakery:'bakery'};
 const KINDFOOD={i:'izakaya',c:'cafe',k:'bakery',b:'bar',p:'bar',f:'burger'};
@@ -50,7 +69,7 @@ const SPOT=[
  [/水族館|アクアリウム/,'🐠','수족관','바다 생물 관람·돌고래 쇼','보통 ¥2,000~3,500'],
  [/動物園|サファリ|どうぶつ/,'🦁','동물원','동물 관람·먹이 주기 체험','보통 ¥500~2,500'],
  [/植物園|フラワー|花園|ガーデン/,'🌷','식물원·꽃 정원','계절 꽃과 정원 산책','무료~¥1,000'],
- [/庭園|園$/,'🌿','정원','일본식 정원을 산책하며 경치를 보는 곳','무료~¥1,000'],
+ [/庭園|園$|苑$/,'🌿','정원','일본식 정원을 산책하며 경치를 보는 곳','무료~¥1,000'],
  [/美術館|ギャラリー|アート/,'🖼️','미술관','그림·작품 전시 관람','보통 ¥500~2,000'],
  [/博物館|資料館|記念館|ミュージアム|歴史館|科学館|郷土館/,'🏛️','박물관·전시관','지역 역사·문화·과학 전시 관람','무료~¥1,500'],
  [/タワー|展望|スカイ/,'🗼','전망대·타워','높은 곳에서 도시·자연 경치를 보는 곳','무료~¥3,000'],
@@ -75,6 +94,75 @@ const SPOT=[
 const SPOT_KIND={o:['♨️','온천·목욕탕','온천욕 (수건 대여·판매 있는 곳 많음)','보통 ¥500~1,500'],m:['🏛️','박물관·미술관','전시 관람','무료~¥1,500'],h:['🏯','성','성곽·천수각 관람','보통 ¥300~1,000']};
 const SUB_SPOT={viewpoint:['🔭','전망 포인트','경치 감상·사진 찍기','무료'],zoo:['🦁','동물원','동물 관람','보통 ¥500~2,500'],aquarium:['🐠','수족관','바다 생물 관람','보통 ¥2,000~3,500'],theme_park:['🎢','테마파크','놀이기구·쇼','¥1,000~10,000'],gallery:['🖼️','갤러리','작품 전시 관람','무료~¥1,000'],museum:['🏛️','박물관','전시 관람','무료~¥1,500']};
 const yen=n=>'¥'+Number(n).toLocaleString('ja-JP');
+/* ---------- 주요 체인점 실제 대표메뉴·가격 (세금 포함, 매장 식사 기준, 공식·공개 자료로 확인) ---------- */
+const CHAINS=[
+// [이름 시작 글자(OSM name/brand), 한국어, 종류, [[메뉴,엔(,최대)]...], 확인 월, 출처]
+[['吉野家','Yoshinoya'],'요시노야','규동',[['규동 보통',498],['규동 곱빼기',740],['규동 특곱빼기',938]],'2026-11','https://pricey.jp/web/articles/4515'],
+[['すき家','Sukiya','SUKIYA'],'스키야','규동',[['규동 보통',480],['규동 곱빼기',680],['소갈비 덮밥 보통',780]],'2026-11','https://kumanichi.com/articles/2009856'],
+[['松屋','Matsuya'],'마쓰야','규동·정식',[['규메시 보통',460],['로스카츠 정식',690],['소불고기 정식',890]],'2026-11','https://www.pricey.jp/web/articles/4516'],
+[['なか卯','Nakau'],'나카우','오야코동·우동',[['오야코동 보통',480],['오야코동 소',390]],'2026-11','https://www.pricey.jp/web/articles/4637'],
+[['やよい軒','Yayoiken','YAYOI'],'야요이켄','정식',[['생강구이 정식',890],['가라아게 정식',990],['치킨난반 정식',990]],'2026-11','https://www.pricey.jp/web/articles/4590'],
+[['大戸屋','Ootoya','OOTOYA'],'오토야','정식',[['정식 대부분',950,1050]],'2024','https://www.ootoya.com/menu/'],
+[['丸亀製麺','Marugame'],'마루가메 제면','사누키 우동',[['가마아게 우동 보통',390],['붓카케 우동(냉) 보통',440],['명란 가마타마 우동',640]],'2026-11','https://gourmet.watch.impress.co.jp/docs/news/2136655.html'],
+[['はなまるうどん','Hanamaru Udon'],'하나마루 우동','사누키 우동',[['가케 우동 소',360],['온센타마고 붓카케 소',490],['기쓰네 우동 소',580]],'2026-11','https://www.pricey.jp/web/articles/4638'],
+[['名代富士そば','富士そば','Fuji Soba','Fujisoba'],'후지소바','서서 먹는 소바',[['가케소바',450],['모리소바',450],['고로케 소바',610]],'2026-11','https://fujisoba.co.jp/menu/'],
+[['ゆで太郎','Yudetaro'],'유데타로','소바',[['모리소바',430],['가케소바',430],['야채튀김 소바',550]],'2026-11','https://pricey.jp/web/articles/4775'],
+[['かつや','Katsuya','KATSUYA'],'가츠야','돈카츠·가츠동',[['가츠동(기본)',682],['가츠동(중)',869],['로스카츠 정식',913]],'2026-11','https://pricey.jp/web/articles/4554'],
+[['天丼てんや','てんや','Tenya','TENYA'],'텐야','텐동',[['원조 텐동',730],['올스타 텐동',860],['닭·잎새버섯 텐동',630]],'2026-11','https://www.j-cast.com/2026/10/29518784.html'],
+[['一蘭','Ichiran','ICHIRAN'],'이치란','라멘',[['돈코츠 라멘',1080],['면 추가(카에다마)',210]],'2026-11','https://pricey.jp/web/articles/4683'],
+[['一風堂','Ippudo','IPPUDO'],'잇푸도','라멘',[['시로마루 모토아지(돈코츠)',820],['아카마루 신아지(매운 미소 돈코츠)',920]],'2026-07','https://aumo.jp/articles/731308'],
+[['天下一品','Tenkaippin','Tenka Ippin'],'텐카잇핀','라멘',[['콧테리 라멘(보통)',940],['앗사리 라멘(보통)',940]],'2026-02','https://pricey.jp/web/articles/4798'],
+[['幸楽苑','Kourakuen','Korakuen'],'고라쿠엔','라멘',[['간장 라멘(주카소바)',490],['등지방 주카소바',590],['교자',280]],'2026-11','https://stores.kourakuen.co.jp/grandmenu'],
+[['日高屋','熱烈中華食堂日高屋','Hidakaya'],'히다카야','중화·라멘',[['주카소바',420],['야채 듬뿍 탄멘',620],['교자 6개',300]],'2026-11','https://hidakaya.hiday.co.jp/'],
+[['スガキヤ','寿がきや','Sugakiya','SUGAKIYA'],'스가키야','라멘',[['라멘',430],['고기 라멘',580],['소프트아이스크림',190]],'2026-11','https://www.sugakico.co.jp/menu/'],
+[['魁力屋','ラーメン魁力屋','Kairikiya'],'카이리키야','라멘',[['간장 라멘(보통)',825],['구조파 등지방 간장 라멘',1089]],'2026-11','https://www.kairikiya.co.jp/menu/5'],
+[['大阪王将','Osaka Ohsho','Osaka Osho'],'오사카오쇼','중화',[['원조 군만두 1인분',330]],'2025-04','https://yomuno.jp/posts/122998'],
+[['餃子の王将','Gyoza no Ohsho'],'교자노오쇼','중화',[['교자 6개',363],['볶음밥',693],['덴신항',737]],'2026-11','https://www.ohsho.co.jp/menu/east/'],
+[['バーミヤン','Bamiyan'],'바미얀','중화 패밀리 레스토랑',[['바미얀 라멘',714],['볶음밥(수프바 포함)',659]],'2026-11','https://www.pricey.jp/web/articles/4943'],
+[['CoCo壱番屋','カレーハウスCoCo壱番屋','ココイチ','CoCo Ichibanya'],'코코이찌방야','카레',[['포크 카레',646],['로스카츠 카레',1055],['수제 돈카츠 카레',1319]],'2026-11','https://www.ichibanya.co.jp/menu/list.html?cid=1'],
+[['ゴーゴーカレー','Go Go Curry','GoGoCurry'],'고고카레','카레',[['로스카츠 카레(중)',950],['메이저 카레(중)',1700]],'2026-05','https://www.pricey.jp/web/articles/4711'],
+[['スシロー','あきんどスシロー','Sushiro'],'스시로','회전초밥',[['최저가 접시(연어·오징어 등)',120,150],['엄선 참치 아카미',150]],'2026-11','https://pricey.jp/web/articles/4518'],
+[['くら寿司','無添くら寿司','Kura Sushi'],'쿠라스시','회전초밥',[['최저가 접시',110],['숙성 참치',120],['연어',120]],'2026-11','https://www.hokkaido-np.co.jp/article/1355650/'],
+[['はま寿司','Hama Sushi','Hamazushi'],'하마스시','회전초밥',[['최저가 접시(참치 등)',110],['참치 주토로',176],['성게 군함말이',319]],'2026-11','https://www.hamazushi.com/topics/2026/0316000788.html'],
+[['かっぱ寿司','Kappa Sushi','Kappazushi'],'갓파스시','회전초밥',[['최저가 접시',110],['주토로·단새우 등',165]],'2026-11','https://pricey.jp/web/articles/4635'],
+[['サイゼリヤ','Saizeriya'],'사이제리야','이탈리안 패밀리 레스토랑',[['밀라노풍 도리아',300],['매운 치킨',300],['페페론치노',300]],'2026-10','https://ichioshi.allabout.co.jp/articles/limited/35025'],
+[['ガスト','Gusto'],'가스토','패밀리 레스토랑',[['치즈 인 함바그',714,824],['치즈 온 치즈 인 함바그',989]],'2026-04','https://yomuno.jp/posts/137053'],
+[['デニーズ',"Denny's",'Dennys'],'데니스','패밀리 레스토랑',[['일본풍 함바그',880],['무즙 함바그',990],['소고기 함바그 스테이크',1518]],'2026-11','https://www.dennys.jp/menu/hamburg/'],
+[['ジョナサン',"Jonathan's"],'조나단','패밀리 레스토랑',[['감자튀김',329],['드링크바(세트)',296,439]],'2026-10','https://report.iko-yo.net/articles/34393'],
+[['ココス',"COCO'S","Coco's"],'코코스','패밀리 레스토랑',[['코코스 함바그',869],['6종 치즈 호일구이 함바그',1309]],'2026-11','https://www.cocos-jpn.co.jp/menu/'],
+[['ロイヤルホスト','Royal Host'],'로열호스트','고급 패밀리 레스토랑',[['카시미르 비프카레',1793],['흑×흑 함바그',1628],['로열 오므라이스',1243]],'2026-11','https://www.royalhost.jp/menu/'],
+[['びっくりドンキー','Bikkuri Donkey'],'빗쿠리동키','함바그 레스토랑',[['레귤러 버그 디시 150g',930,1020],['치즈 버그 디시 150g',1130]],'2026-10','https://pricey.jp/web/articles/4642'],
+[['ジョイフル','Joyfull'],'조이풀','저가 패밀리 레스토랑',[['일일 원코인 런치',500],['페퍼 함바그',702],['치즈 함바그',735]],'2026-05','https://pricey.jp/web/articles/4935'],
+[['マクドナルド',"McDonald's",'McDonalds'],'맥도날드','햄버거',[['빅맥',500],['데리야키 맥버거',400],['치즈버거',240]],'2026-11','https://www.mcdonalds.co.jp/menu/burger/'],
+[['モスバーガー','MOS BURGER','Mos Burger'],'모스버거','햄버거',[['모스버거',500],['데리야키버거',490]],'2026-10','https://www.pricey.jp/web/articles/4524'],
+[['ゼッテリア','ロッテリア','ZETTERIA','LOTTERIA','Lotteria'],'젯테리아(구 롯데리아)','햄버거',[['절품 비프버거',540]],'2026-04','https://news.mynavi.jp/article/20260413-4330358/'],
+[['ケンタッキー','KFC','Kentucky'],'KFC','치킨',[['오리지널 치킨 1조각',330],['일본풍 치킨카츠버거',490]],'2026-11','https://www.kfc.co.jp/menu/'],
+[['バーガーキング','Burger King','BURGER KING'],'버거킹','햄버거',[['와퍼 치즈',740],['스파이시 와퍼 주니어',480]],'2026-06','https://www.burgerking.co.jp/'],
+[['フレッシュネスバーガー','Freshness Burger','FRESHNESS BURGER'],'프레시니스버거','햄버거',[['프레시니스버거',560],['클래식버거',690],['클래식 치즈버거',780]],'2026-11','https://www.freshnessburger.co.jp/menu/hamburger'],
+[['焼肉きんぐ','Yakiniku King'],'야키니쿠 킹','야키니쿠 무한리필',[['58품 코스(성인)',3278]],'2026-05','https://ichioshi.allabout.co.jp/articles/common/501285'],
+[['牛角','Gyu-Kaku','Gyukaku','GYU-KAKU'],'규카쿠','야키니쿠',[['무한리필 50품 코스',3058],['70품 이상 코스',3718]],'2026-10','https://pricey.jp/web/articles/4969'],
+[['焼肉ライク','Yakiniku Like','YAKINIKU LIKE'],'야키니쿠 라이크','1인 야키니쿠',[['갈비+닭가슴살 세트',690]],'2026-05','https://weekly.ascii.jp/elem/000/004/400/4400096/'],
+[['鳥貴族','Torikizoku','TORIKIZOKU'],'도리키조쿠','야키토리 이자카야',[['전 메뉴 균일가',410],['닭다리 꼬치(모모 키조쿠야키)',410]],'2026-11','https://www.pricey.jp/web/articles/4494'],
+[['磯丸水産','Isomaru'],'이소마루 수산','해산물 이자카야',[['게미소 등딱지구이',499,549],['해산물 넘치는 덮밥',980,1078]],'2026-08','https://ranking.net/rankings/best-isomaru-menu'],
+[['串カツ田中','Kushikatsu Tanaka'],'쿠시카츠 다나카','쿠시카츠 이자카야',[['돼지 쿠시카츠',198],['소고기 쿠시카츠',209],['기본 5개 모둠',924]],'2026-11','https://kushi-tanaka.com/menu/items/menu_kushikatsu'],
+[['いきなり!ステーキ','いきなりステーキ','いきなり！ステーキ','Ikinari Steak'],'이키나리 스테이크','스테이크',[['와일드 스테이크 300g',2920],['특선 안심 200g',3770],['립로스 300g',4410]],'2026-11','https://ikinaristeak.com/menu/'],
+[['スターバックス','Starbucks'],'스타벅스','카페',[['스타벅스 라떼(톨)',515,535]],'2026-11','https://kumanichi.com/articles/2037459'],
+[['ドトール','Doutor'],'도토루','카페',[['블렌드 커피(S)',300],['카페라떼(S)',400],['밀라노 샌드 A',520]],'2026-11','https://pricey.jp/web/articles/4748'],
+[['タリーズ',"Tully's",'Tullys'],'털리스','카페',[['오늘의 커피(톨)',450],['카페라떼(톨)',510],['볼파크 도그',410]],'2026-11','https://gourmet.watch.impress.co.jp/docs/news/2035035.html'],
+[['コメダ','Komeda'],'코메다 커피','카페',[['코메다 블렌드',460,700],['시로누아르',740,800],['미니 시로누아르',540,600]],'2026-11','https://ichioshi.allabout.co.jp/articles/limited/32461'],
+[['サンマルク','Saint Marc','St.Marc'],'생마르크 카페','카페',[['블렌드 커피(S)',350],['카페라떼(S)',450],['초코크로',250]],'2026-11','https://www.saint-marc-hd.com/saintmarccafe/menu/'],
+[['エクセルシオール','Excelsior'],'엑셀시오르 카페','카페',[['블렌드 커피(R)',390],['카페라떼(R)',500]],'2026-11','https://www.doutor.co.jp/exc/menu/'],
+[['星乃珈琲'],'호시노 커피','카페',[['호시노 블렌드',450,580],['수플레 팬케이크(싱글)',580],['수플레 팬케이크(더블)',780]],'2025-06','https://macaro-ni.jp/150192'],
+[['上島珈琲','Ueshima'],'우에시마 커피','카페',[['흑당 밀크커피(R)',690]],'2026-11','https://www.ueshima-coffee-ten.jp/menu/'],
+[['ミスタードーナツ','ミスド','Mister Donut'],'미스터도넛','도넛',[['폰데링',187],['올드패션',187],['블렌드 커피',297]],'2026-11','https://www.misterdonut.jp/m_menu/donut/'],
+[['珈琲館','Kohikan'],'코히칸','카페',[['코히칸 블렌드',590,850],['숯불 커피',650,910],['핫케이크',850,1110]],'2026-11','https://c-united.co.jp/coffeekan/products/coffee/'],
+[['カフェ・ベローチェ','ベローチェ','Veloce'],'카페 벨로체','카페',[['블렌드 커피(R)',350,450],['카페라떼(R)',430,530],['커피젤리',480]],'2026-11','https://c-united.co.jp/veloce/products/hotdrink/'],
+[['サーティワン','31アイスクリーム','Baskin'],'배스킨라빈스(31)','아이스크림',[['레귤러 싱글',420],['스몰 더블',510],['키즈',340]],'2026-11','https://www.pricey.jp/web/articles/4828'],
+];
+function chainOf(r){
+  const name=String(r[1]||'').trim(),brand=String(r[14]||'').trim(),ln=name.toLowerCase(),lb=brand.toLowerCase();
+  return CHAINS.find(c=>c[0].some(m=>{const lm=m.toLowerCase();return ln.startsWith(lm)||(lb&&(lb===lm||lb.startsWith(lm)))}));
+}
 function jzGuess(r){
   const name=String(r[1]||'')+' '+String(r[2]||''),k=r[3],tags=String(r[4]||'').toLowerCase().split(';').map(x=>x.trim()),sub=r[12]||'',desc=r[13]||'';
   if('omha'.includes(k)){
@@ -82,8 +170,11 @@ function jzGuess(r){
     if(s)return {spot:true,icon:s[1],label:s[2],what:s[3],price:s[4],desc};
     const t=SUB_SPOT[sub]||SPOT_KIND[k];
     if(t)return {spot:true,icon:t[0],label:t[1],what:t[2],price:t[3],desc};
+    if(desc)return {spot:true,icon:'📍',label:'관광명소',what:desc,price:'',desc:''};
     return {spot:true,icon:'📍',label:'관광명소',what:'무엇을 하는 곳인지는 📷 사진·지도에서 확인',price:'',desc};
   }
+  const ch=chainOf(r);
+  if(ch){const ys=ch[3].flatMap(i=>i.slice(1).filter(Boolean));return {spot:false,chain:true,label:ch[1],what:ch[2]+' 체인',items:ch[3],checked:ch[4],source:ch[5],lo:Math.min(...ys),hi:Math.max(...ys),price:ys.length?yen(Math.min(...ys))+'~'+yen(Math.max(...ys)):'',desc}}
   let f=FOOD.find(x=>x[1].test(name));let src='name';
   if(!f){for(const t of tags){const key=TAG[t];if(key){f=FOOD.find(x=>x[0]===key);src='tag';break}}}
   if(!f&&KINDFOOD[k]){f=FOOD.find(x=>x[0]===KINDFOOD[k]);src='kind'}
@@ -95,11 +186,15 @@ const escH=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 function jzMenuLine(r,place){
   const g=jzGuess(r);
   const photo='https://www.google.com/search?tbm=isch&q='+encodeURIComponent((r[1]||'')+' '+(place||'')+(g.spot?'':' メニュー'));
+  if(g.chain){
+    const items=g.items.map(i=>`<li>${escH(i[0])} <b>${i[1]?yen(i[1])+(i[2]?'~'+yen(i[2]):''):'가격 확인 필요'}</b></li>`).join('');
+    return `<div class="jz-menu-line jz-chain">🍽️ <b>${escH(g.label)}</b> · ${escH(g.what)}<ul class="jz-items">${items}</ul><div class="jz-price-note">✓ 실제 가격(세금 포함·매장 식사) · ${escH(g.checked)} 확인 · 매장·지역별 차이 가능 <a target="_blank" rel="noopener noreferrer" href="${escH(g.source)}">출처↗</a></div><a class="jz-photo" target="_blank" rel="noopener noreferrer" href="${photo}">📷 메뉴 사진 보기 ↗</a></div>`;
+  }
   const head=g.spot?`${g.icon} <b>${escH(g.label)}</b> — ${escH(g.what)}`:`🍽️ <b>${escH(g.label)}</b> — ${escH(g.what)}`;
   return `<div class="jz-menu-line">${head}${g.price?`<div class="jz-price">💴 ${escH(g.price)} <small>(이런 ${g.spot?'곳':'가게'}의 일반적인 가격대 · 추정)</small></div>`:''}${g.desc?`<div class="jz-odesc">“${escH(g.desc)}”</div>`:''}<a class="jz-photo" target="_blank" rel="noopener noreferrer" href="${photo}">📷 ${g.spot?'사진':'메뉴 사진'} 보기 ↗</a></div>`;
 }
 window.jzGuess=jzGuess;window.jzMenuLine=jzMenuLine;
-{const css=document.createElement('style');css.textContent='.jz-menu-line{font-size:13px;color:#2f4a40;background:#f7faf6;border-radius:10px;padding:8px 10px;line-height:1.55}.jz-price{color:#8a6a2a;font-weight:700;font-size:12px}.jz-price small{font-weight:500;color:#9a8a6a}.jz-odesc{font-size:12px;color:#5b6b64;margin-top:2px}.jz-photo{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--blue,#375f93)}';document.head.append(css)}
+{const css=document.createElement('style');css.textContent='.jz-menu-line{font-size:13px;color:#2f4a40;background:#f7faf6;border-radius:10px;padding:8px 10px;line-height:1.55}.jz-price{color:#8a6a2a;font-weight:700;font-size:12px}.jz-price small{font-weight:500;color:#9a8a6a}.jz-odesc{font-size:12px;color:#5b6b64;margin-top:2px}.jz-photo{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--blue,#375f93)}.jz-chain{background:#fff8ec;border:1px solid #f0dcb4}.jz-items{margin:4px 0 2px;padding-left:18px}.jz-items b{color:#8a5a12}.jz-price-note{font-size:11px;color:#6b7a73}.jz-price-note a{text-decoration:underline}';document.head.append(css)}
 
 if(typeof buildSchedule!=='function'||typeof renderSchedule!=='function')return;
 const q=s=>document.querySelector(s);
@@ -147,8 +242,8 @@ function osmPlace(r,doc,slug,prev){
   const city=(doc.cities[r[7]]?.[0]||'')+(r[8]?' '+r[8]:'');
   const d=prev?dist(prev.lat,prev.lon,r[5],r[6]):null;
   return {id:'osm:'+slug+':'+r[0],name:r[1],jp:r[1],pref:doc.pref,area:city||doc.jp,genre:genreOf(r),sub:KIND[r[3]]||'',
-    menu:(()=>{const g=jzGuess(r);return g.label+' — '+g.what+' (📋 전체 가게)'})(),
-    price:(d!=null?'이전 장소에서 약 '+(d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km')+' · ':'')+(jzGuess(r).price||'가격은 지도에서 확인')+(jzGuess(r).price?' (추정)':''),
+    menu:(()=>{const g=jzGuess(r);return g.chain?g.label+' — '+g.items.filter(i=>i[1]).slice(0,2).map(i=>i[0]+' '+yen(i[1])).join(', ')+' (실제 가격)':g.label+' — '+g.what+' (📋 전체 가게)'})(),
+    price:(d!=null?'이전 장소에서 약 '+(d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km')+' · ':'')+(jzGuess(r).price||'가격은 지도에서 확인')+(jzGuess(r).price?(jzGuess(r).chain?' (실제 가격)':' (추정)'):''),
     map:gmaps(r[1]+' '+(doc.cities[r[7]]?.[0]||doc.jp)),lat:r[5],lon:r[6],hours:r[9]||'',osm:true,desc:'OpenStreetMap 전체 가게',priceCheck:'estimate'};
 }
 function planDayOSM(doc,slug,k,last,used,keepTimes){
