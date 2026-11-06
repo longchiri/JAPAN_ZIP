@@ -306,7 +306,7 @@ function slotsFor(last){
 function osmPlace(r,doc,slug,prev){
   const city=(doc.cities[r[7]]?.[0]||'')+(r[8]?' '+r[8]:'');
   const d=prev?dist(prev.lat,prev.lon,r[5],r[6]):null;
-  return {id:'osm:'+slug+':'+r[0],name:r[1],jp:r[1],pref:doc.pref,area:city||doc.jp,genre:genreOf(r),sub:KIND[r[3]]||'',
+  return {id:'osm:'+slug+':'+r[0],name:r[1],ko:r[15]||'',jp:r[1],pref:doc.pref,area:city||doc.jp,genre:genreOf(r),sub:KIND[r[3]]||'',
     menu:(()=>{const g=jzGuess(r);return g.chain?g.label+' — '+g.items.filter(i=>i[1]).slice(0,2).map(i=>i[0]+' '+yen(i[1])).join(', ')+' (실제 가격)':g.label+' — '+g.what+' (📋 전체 가게)'})(),
     price:(d!=null?'이전 장소에서 약 '+(d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km')+' · ':'')+(jzGuess(r).price||'가격은 지도에서 확인')+(jzGuess(r).price?(jzGuess(r).chain?' (실제 가격)':' (추정)'):''),
     map:gmaps(r[1]+' '+(doc.cities[r[7]]?.[0]||doc.jp)),lat:r[5],lon:r[6],hours:r[9]||'',osm:true,desc:'OpenStreetMap 전체 가게',priceCheck:'estimate'};
@@ -363,14 +363,22 @@ function coordOf(p){
   const r=doc._byName.get(normN(p.jp))||doc._byName.get(normN(p.name));
   p._co=r?{lat:r[5],lon:r[6]}:null;return p._co;
 }
+/* ---------- 🏨 숙소 (기본 숙소 + 날짜별 변경) ---------- */
+const STAY_KEY='jz-plan-stays-v1';
+let STAYS=st.get(STAY_KEY,null);if(!STAYS||typeof STAYS!=='object'||Array.isArray(STAYS))STAYS={base:null,days:{}};if(!STAYS.days||typeof STAYS.days!=='object')STAYS.days={};
+const saveStays=()=>st.set(STAY_KEY,STAYS);
+const stayFor=i=>STAYS.days[i]||STAYS.base||null;
+const stayCo=s=>s&&s.lat!=null?{lat:s.lat,lon:s.lon}:null;
+const stayMap=s=>s.link||(s.lat!=null?gmaps(s.lat+','+s.lon):gmaps(s.name+' '+(s.pref||'')));
+const fmtD=d=>d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km';
 function applyEditsAndDistances(cards){
   cards.forEach((day,i)=>{
     day.items.forEach(o=>{const id=EDITS[i+'|'+o.t];if(!id)return;const f=placeFromId(id);if(!f)return;
       if(f.cur)o.p=f.cur;else{const doc=docs.get(f.slug);o.p=osmPlace(f.row,doc,f.slug,null);o.p._row=f.row;o.p._slug=f.slug}o.p._edited=true});
-    let prev=null;
+    let prev=stayCo(stayFor(i)),fromStay=!!prev;
     day.items.forEach(o=>{const c=coordOf(o.p);
-      if(o.p.osm){const slug=o.p._slug||String(o.p.id).split(':')[1];const rid=String(o.p.id).split(':')[2];const r=o.p._row||rowById(slug,rid);if(r){const ed=o.p._edited;o.p=osmPlace(r,docs.get(slug),slug,prev);o.p._edited=ed;const aw=isAwarded(docs.get(slug),r);if(aw)o.p.menu=aw+' 현지 평가 · '+o.p.menu}}
-      if(c)prev=c;});
+      if(o.p.osm){const slug=o.p._slug||String(o.p.id).split(':')[1];const rid=String(o.p.id).split(':')[2];const r=o.p._row||rowById(slug,rid);if(r){const ed=o.p._edited;o.p=osmPlace(r,docs.get(slug),slug,prev);o.p._edited=ed;if(fromStay)o.p.price=o.p.price.replace('이전 장소에서 약','🏨 숙소에서 약');const aw=isAwarded(docs.get(slug),r);if(aw)o.p.menu=aw+' 현지 평가 · '+o.p.menu}}
+      if(c){prev=c;fromStay=false}});
   });
   return cards;
 }
@@ -394,11 +402,30 @@ renderSchedule=function(){
   nativeRender();ensureDocs();
   const cards=buildSchedule();
   q('#days')?.querySelectorAll('article.day').forEach((art,i)=>{
-    const items=cards[i]?.items||[];if(items.length<2||art.querySelector('.jz-route-link'))return;
+    const items=cards[i]?.items||[];
+    // 일본어 가게 이름 밑에 한글 읽기
+    [...art.querySelectorAll('ol > li')].filter(li=>li.querySelector('.route-content > a')).forEach((li,k)=>{const p=items[k]?.p;if(!p?.ko||p.ko===p.name||li.querySelector('.fz-ko'))return;
+      const d=document.createElement('div');d.className='fz-ko';d.textContent='🇰🇷 '+p.ko;d.title='한글 읽기 (자동 변환)';li.querySelector('.route-content > a').after(d)});
+    // 🏨 숙소 출발 / 복귀 줄
+    const stay=stayFor(i),ol=art.querySelector('ol');
+    if(ol&&!ol.querySelector('.jz-stay-li')){
+      const top=document.createElement('li');top.className='jz-stay-li';
+      top.innerHTML=stay?`<span class="time">🏨 출발</span><div class="route-content"><a href="${esc(stayMap(stay))}" target="_blank" rel="noopener noreferrer">${esc(stay.name)} ↗</a>${stay.ko&&stay.ko!==stay.name?`<div class="fz-ko">🇰🇷 ${esc(stay.ko)}</div>`:''}<p class="jz-stay-note">숙소${STAYS.days[i]?' (이 날만 변경)':' (기본 숙소)'}${stay.lat==null?' · 위치 좌표가 없어 거리는 계산하지 않아요':''}</p><button type="button" class="btn jz-stay-btn" data-stay-edit="${i}">🏨 숙소 바꾸기</button></div>`
+        :`<span class="time">🏨 숙소</span><div class="route-content"><p class="jz-stay-note">숙소를 넣으면 숙소에서 출발해서 돌아오는 동선과 거리가 나와요.</p><button type="button" class="btn dark jz-stay-btn" data-stay-edit="${i}">🏨 숙소 정하기</button></div>`;
+      const firstLi=ol.querySelector('li');
+      if(cards[i]?.first&&firstLi)firstLi.after(top);else ol.prepend(top);
+      if(stay&&!cards[i]?.last){const back=document.createElement('li');back.className='jz-stay-li jz-stay-back';
+        const lastC=[...items].reverse().map(o=>coordOf(o.p)).find(Boolean),sc=stayCo(stay);
+        back.innerHTML=`<span class="time">🏨 복귀</span><div class="route-content"><b>${esc(stay.name)}</b>(으)로 돌아가기${lastC&&sc?` · 마지막 장소에서 약 ${fmtD(dist(lastC.lat,lastC.lon,sc.lat,sc.lon))}`:''}</div>`;
+        const lastLi=ol.lastElementChild;if(cards[i]?.last&&lastLi)lastLi.before(back);else ol.append(back)}
+    }
+    if(items.length<1||art.querySelector('.jz-route-link'))return;
     const pt=p=>p.lat!=null?p.lat+','+p.lon:(p.jp||p.name)+' '+(p.pref||'');
     const pts=items.map(o=>pt(o.p));
+    if(stay){const sp=stay.lat!=null?stay.lat+','+stay.lon:stay.name+' '+(stay.pref||'');pts.unshift(sp);if(!cards[i]?.last)pts.push(sp)}
+    if(pts.length<2)return;
     const url='https://www.google.com/maps/dir/?api=1&travelmode=transit&origin='+encodeURIComponent(pts[0])+'&destination='+encodeURIComponent(pts[pts.length-1])+(pts.length>2?'&waypoints='+encodeURIComponent(pts.slice(1,-1).join('|')):'');
-    const a=document.createElement('a');a.className='btn jz-route-link';a.target='_blank';a.rel='noopener noreferrer';a.href=url;a.textContent='🗺️ 이 날 동선 구글 지도로 보기 ↗';
+    const a=document.createElement('a');a.className='btn jz-route-link';a.target='_blank';a.rel='noopener noreferrer';a.href=url;a.textContent=stay?'🗺️ 숙소 출발·복귀 동선 구글 지도로 보기 ↗':'🗺️ 이 날 동선 구글 지도로 보기 ↗';
     (art.querySelector('footer')||art).append(a);
   });
   const n=cards.reduce((s,d)=>s+d.items.filter(x=>x.p.osm).length,0);
@@ -412,6 +439,78 @@ renderSchedule=function(){
   sel.addEventListener('change',()=>{st.set(MODE_KEY,sel.value);EDITS={};saveEdits();renderSchedule()});
   q('#replan')?.addEventListener('click',()=>{EDITS={};saveEdits()},true);
   q('#jzResetSuggested')?.addEventListener('click',()=>{EDITS={};saveEdits();setTimeout(renderSchedule,0)});
+})();
+
+/* ---------- 🏨 숙소 정하기 창 ---------- */
+(function stayEditor(){
+  const days=q('#days');if(!days)return;
+  const TYPE={hotel:'호텔',hostel:'호스텔',guest_house:'게스트하우스·민박',ryokan:'료칸',motel:'모텔',apartment:'레지던스'};
+  const stayDocs=new Map();
+  const loadStay=slug=>{if(stayDocs.has(slug))return stayDocs.get(slug);const p=fetch('data/osm/'+slug+'.stay.json').then(r=>r.ok?r.json():null).catch(()=>null);stayDocs.set(slug,p);return p};
+  function parseCo(t){t=String(t||'');const m=t.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||t.match(/[?&](?:q|query|ll|destination|center)=(-?\d+\.\d+)(?:,|%2C)\s*(-?\d+\.\d+)/i)||t.match(/^\s*(-?\d{1,2}\.\d+)\s*[, ]\s*(-?\d{2,3}\.\d+)\s*$/);
+    if(!m)return null;const lat=+m[1],lon=+m[2];return lat>20&&lat<46.6&&lon>122&&lon<154.5?{lat,lon}:null}
+  const box=document.createElement('div');box.id='jzStayDialog';box.className='jz-suggest-overlay';box.hidden=true;
+  box.innerHTML=`<div class="jz-suggest-panel" role="dialog" aria-modal="true" aria-labelledby="jzStayHeading"><div class="jz-suggest-head"><div><small>JAPAN_ZIP · 숙소</small><h2 id="jzStayHeading">🏨 숙소 정하기</h2><p id="jzStayCtx" class="tiny"></p></div><button id="jzStayClose" type="button" class="btn" aria-label="닫기">✕</button></div>
+   <div class="jz-stay-scope" id="jzStayScopeBox"><label><input type="radio" name="jzStayScope" value="base" checked> 모든 날 (기본 숙소)</label><label><input type="radio" name="jzStayScope" value="day"> <span id="jzStayDayLabel">이 날만</span></label></div>
+   <div class="jz-suggest-filters"><label>도도부현<select id="jzStayPref"></select></label><label>숙소 이름 검색 (일본어·한글 읽기)<input id="jzStayQ" placeholder="예: 東横イン, 도요코인, ドーミーイン, 료칸"></label></div>
+   <p id="jzStaySum" class="jz-suggest-summary"></p><div id="jzStayRes" class="jz-suggest-results"></div>
+   <details class="jz-stay-manual"><summary>✍️ 목록에 없으면 직접 넣기</summary>
+    <label>숙소 이름<input id="jzStayName" placeholder="예: 호텔 ○○ 난바"></label>
+    <label>구글 지도 링크 또는 좌표<input id="jzStayLink" placeholder="예: 34.6687, 135.5013  또는  https://www.google.com/maps/place/...@34.66,135.50..."></label>
+    <p class="tiny">구글 지도에서 숙소 위치를 길게 누르거나(폰) 우클릭(PC)하면 나오는 숫자 좌표를 붙여넣으면 거리 계산이 정확해요. 짧은 공유 링크(maps.app.goo.gl)는 좌표가 없어서 이름으로만 길찾기를 해요.</p>
+    <button type="button" class="btn dark" id="jzStaySave">이 숙소로 저장</button></details>
+   <div class="jz-stay-foot"><button type="button" class="btn" id="jzStayClear">숙소 지우기</button></div></div>`;
+  document.body.append(box);
+  const prefSel=q('#jzStayPref'),qi=q('#jzStayQ'),res=q('#jzStayRes'),sum=q('#jzStaySum');
+  prefSel.innerHTML=Object.keys(SLUG).map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
+  let cur=null,rows=[];
+  const norm=x=>String(x||'').toLowerCase().normalize('NFKC').replace(/\s+/g,'');
+  async function open(target){
+    const cards=buildSchedule();const i=target==='base'?0:+target;const day=cards[i];
+    const pref=String(day?.zone||'').split(' · ')[0];
+    cur={i,target};prefSel.value=SLUG[pref]?pref:(stayFor(i)?.pref||neededPrefs()[0]||'오사카');
+    q('#jzStayCtx').textContent=target==='base'?'모든 날에 쓰는 숙소예요. 도시를 옮기는 날만 DAY별로 따로 바꾸면 돼요.':`DAY ${i+1} · ${day?.zone||''}`;
+    q('#jzStayScopeBox').hidden=target==='base';q('#jzStayDayLabel').textContent=`DAY ${i+1}만`;
+    box.querySelector(`input[name=jzStayScope][value=${target!=='base'&&STAYS.days[i]?'day':'base'}]`).checked=true;
+    const s=target==='base'?STAYS.base:stayFor(i);q('#jzStayName').value=s?.src==='manual'?s.name:'';q('#jzStayLink').value=s?.src==='manual'?(s.link||(s.lat!=null?s.lat+', '+s.lon:'')):'';
+    qi.value='';box.hidden=false;document.body.style.overflow='hidden';await loadRows();qi.focus();
+  }
+  async function loadRows(){
+    const pref=prefSel.value,slug=SLUG[pref];rows=[];sum.textContent='🏨 '+pref+' 숙소 목록을 불러오는 중…';res.innerHTML='';
+    const d=slug?await loadStay(slug):null;if(prefSel.value!==pref)return;
+    rows=d?.rows||[];
+    if(!d){sum.textContent='숙소 목록이 아직 없어요. 깃허브 Actions에서 데이터를 한 번 다시 빌드하면 생겨요. 지금은 아래 “직접 넣기”를 써 주세요.';box.querySelector('.jz-stay-manual').open=true;return}
+    render();
+  }
+  function render(){
+    const qq=norm(qi.value);
+    if(!qq){sum.textContent=`${prefSel.value} 숙소 ${rows.length.toLocaleString()}곳 · 이름을 입력하면 찾아드려요`;res.innerHTML='';return}
+    const out=rows.filter(r=>norm(r[1]+r[2]+r[6]+r[7]+r[8]+(TYPE[r[3]]||'')).includes(qq));
+    sum.textContent=`${out.length.toLocaleString()}곳 찾음${out.length>60?' · 위에서 60곳만 보여요 (동네 이름을 같이 쳐 보세요)':''}`;
+    res.innerHTML=out.slice(0,60).map(r=>`<article class="jz-suggest-item"><div class="v12-card-top"><span class="tag">🏨 ${esc(TYPE[r[3]]||'숙소')}</span></div><h3>${esc(r[1])}</h3>${r[2]&&r[2]!==r[1]?`<div class="fz-ko">🇰🇷 ${esc(r[2])}</div>`:''}<p>📍 ${esc(r[6])}${r[8]?' '+esc(r[8]):''}${r[7]?' ('+esc(r[7])+')':''}</p><div class="actions"><button class="btn dark" type="button" data-stay-pick="${esc(r[0])}">이 숙소로</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${gmaps(r[1]+' '+r[6])}">지도 ↗</a></div></article>`).join('')||'<div class="jz-noresult">못 찾았어요. 다른 표기(일본어·영어·한글 읽기)로 쳐 보거나 아래 “직접 넣기”를 써 주세요.</div>';
+  }
+  function setStay(obj){
+    const scope=cur.target==='base'?'base':box.querySelector('input[name=jzStayScope]:checked').value;
+    if(scope==='base'){STAYS.base=obj;if(cur.target!=='base')delete STAYS.days[cur.i]}else STAYS.days[cur.i]=obj;
+    saveStays();close();renderSchedule();
+    const s=q('#jzPlanEditStatus');if(s)s.textContent=obj?'🏨 '+obj.name+' — 숙소 기준으로 거리와 동선을 다시 계산했어요.':'🏨 숙소를 지웠어요.';
+  }
+  function close(){box.hidden=true;document.body.style.overflow='';cur=null}
+  box.addEventListener('click',e=>{
+    if(e.target===box||e.target.closest('#jzStayClose'))return close();
+    const b=e.target.closest('[data-stay-pick]');if(b){const r=rows.find(x=>x[0]===b.dataset.stayPick);if(r)setStay({name:r[1],ko:r[2]||'',lat:r[4],lon:r[5],type:r[3],city:r[6],pref:prefSel.value,src:'osm'});return}
+    if(e.target.closest('#jzStaySave')){const name=q('#jzStayName').value.trim();const link=q('#jzStayLink').value.trim();if(!name){q('#jzStayName').focus();return}
+      const co=parseCo(link);setStay({name,ko:'',lat:co?.lat??null,lon:co?.lon??null,pref:prefSel.value,src:'manual',link:/^https?:\/\//.test(link)?link:''});return}
+    if(e.target.closest('#jzStayClear')){if(cur.target==='base')STAYS.base=null;else if(STAYS.days[cur.i])delete STAYS.days[cur.i];else STAYS.base=null;saveStays();close();renderSchedule();return}
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!box.hidden)close()});
+  prefSel.addEventListener('change',loadRows);qi.addEventListener('input',render);
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-stay-edit]');if(!b)return;e.preventDefault();open(b.dataset.stayEdit)});
+  // 일정 위쪽: 기본 숙소 표시줄
+  const src=q('.jz-plan-source');if(src){const bar=document.createElement('div');bar.className='jz-stay-bar';src.after(bar);
+    const paint=()=>{const b=STAYS.base;bar.innerHTML=`🏨 <b>기본 숙소</b> ${b?esc(b.name)+(b.ko&&b.ko!==b.name?` <span class="fz-ko" style="display:inline">(${esc(b.ko)})</span>`:''):'<span class="tiny">아직 없음 — 숙소를 넣으면 매일 숙소에서 출발·복귀하는 동선으로 보여요</span>'} <button type="button" class="btn${b?'':' dark'}" data-stay-edit="base">${b?'바꾸기':'숙소 정하기'}</button>`};
+    paint();
+    new MutationObserver(paint).observe(q('#days'),{childList:true});}
 })();
 
 /* ---------- ✏️ 수정 · 근처 장소 찾기 (실제 거리 기준) ---------- */
@@ -456,7 +555,7 @@ renderSchedule=function(){
     const D=d=>d==null?'':`<span class="v12-dist">📏 ${d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km'}</span>`;
     res.innerHTML=out.slice(0,80).map((o,k)=>{
       if(o.type==='osm'){const r=o.r;const city=(doc.cities[r[7]]?.[0]||'');
-        return `<article class="jz-suggest-item"><div class="v12-card-top">${o.aw?`<span class="tag fz-award">${o.aw} 현지 평가</span>`:''}${D(o.d)}</div><h3>${esc(r[1])}</h3><p>${esc(city)} · ${esc(KIND[r[3]]||'')}${r[9]?' · 🕒 '+esc(r[9]):''}</p>${jzMenuLine(r,city)}<div class="actions"><button class="btn dark" type="button" data-jz-pick="${esc('osm:'+slug+':'+r[0])}">이 장소로 교체</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${gmaps(r[1]+' '+city)}">지도 ↗</a></div></article>`}
+        return `<article class="jz-suggest-item"><div class="v12-card-top">${o.aw?`<span class="tag fz-award">${o.aw} 현지 평가</span>`:''}${D(o.d)}</div><h3>${esc(r[1])}</h3>${window.jzKoLine?window.jzKoLine(r[15],r[1]):''}<p>${esc(city)} · ${esc(KIND[r[3]]||'')}${r[9]?' · 🕒 '+esc(r[9]):''}</p>${jzMenuLine(r,city)}<div class="actions"><button class="btn dark" type="button" data-jz-pick="${esc('osm:'+slug+':'+r[0])}">이 장소로 교체</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${gmaps(r[1]+' '+city)}">지도 ↗</a></div></article>`}
       const x=o.x;return `<article class="jz-suggest-item"><div class="v12-card-top"><span class="tag fz-star">⭐ 추천 도감</span>${D(o.d)}</div><h3>${esc(x.name)}</h3><p>${esc(x.jp||'')} · ${esc(x.area)} · ${esc(x.genre)}</p><p>🍽️ ${esc(x.menu||'')} · ${esc(x.price||'')}</p><div class="actions"><button class="btn dark" type="button" data-jz-pick="${esc(x.id)}">이 장소로 교체</button><a class="btn" target="_blank" rel="noopener noreferrer" href="${esc(x.map)}">지도 ↗</a></div></article>`;
     }).join('')||'<div class="jz-noresult">이 범위에 맞는 장소가 없어요. 거리 범위를 넓히거나 장소 종류를 “전체”로 바꿔 보세요.</div>';
     q('#jzSuggestMapSearch').href=c?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((g||'グルメ')+' near '+c.lat+','+c.lon)}`:gmaps(p.jp+' '+p.pref);
@@ -479,13 +578,13 @@ function rowsMyTrip(){
   return out;
 }
 function rowsPlan(){
-  const out=[];buildSchedule().forEach((d,i)=>d.items.forEach((o,j)=>out.push({'DAY':i+1,'지역':d.zone,'시간':o.t,'장소':o.p.name,'일본어':o.p.jp||'','종류':o.p.genre||'','메뉴·내용':o.p.menu||'','가격·거리':o.p.price||'','출처':o.p.osm?'전체 가게(OSM)':'JAPAN ZIP 추천','구글 지도':o.p.map||gmaps(o.p.name)})));
+  const out=[];buildSchedule().forEach((d,i)=>d.items.forEach((o,j)=>out.push({'DAY':i+1,'지역':d.zone,'숙소':stayFor(i)?.name||'','시간':o.t,'장소':o.p.name,'한글 읽기':o.p.ko||'','일본어':o.p.jp||'','종류':o.p.genre||'','메뉴·내용':o.p.menu||'','가격·거리':o.p.price||'','출처':o.p.osm?'전체 가게(OSM)':'JAPAN ZIP 추천','구글 지도':o.p.map||gmaps(o.p.name)})));
   return out;
 }
 function rowsSaved(){
   const out=[];const cur=new Set(st.get('japan-atlas-faves',[]));
   (typeof DATA!=='undefined'?DATA:[]).filter(p=>cur.has(p.id)).forEach(p=>out.push({'구분':'⭐ 추천','장소':p.name,'일본어':p.jp,'도도부현':p.pref,'지역':p.area,'종류':p.genre,'메뉴':p.menu,'가격':p.price,'영업시간':'','구글 지도':p.map}));
-  Object.values(st.get('jz-osm-faves-v12',{})).forEach(v=>out.push({'구분':'📋 전체 가게','장소':v.name,'일본어':v.alt||'','도도부현':v.pref,'지역':v.city||'','종류':KIND[v.kind]||'','메뉴':v.cuisine?ck(v.cuisine):'','가격':'','영업시간':v.hours||'','구글 지도':gmaps(v.name+' '+(v.city||v.pref))}));
+  Object.values(st.get('jz-osm-faves-v12',{})).forEach(v=>out.push({'구분':'📋 전체 가게','장소':v.name,'한글 읽기':v.ko||'','일본어':v.alt||'','도도부현':v.pref,'지역':v.city||'','종류':KIND[v.kind]||'','메뉴':v.cuisine?ck(v.cuisine):'','가격':'','영업시간':v.hours||'','구글 지도':gmaps(v.name+' '+(v.city||v.pref))}));
   return out;
 }
 async function saveExcel(){
