@@ -266,7 +266,7 @@ function compute(){
   // 📋 OSM
   let rows=osmBase();
   if(F.cuisine)rows=rows.filter(r=>r[4]&&r[4].toLowerCase().split(';').map(x=>x.trim()).includes(F.cuisine));
-  if(F.kw){const q=F.kw;rows=rows.filter(r=>(r[1]+' '+r[2]+' '+r[4]+' '+(r[4]||'').split(';').map(c=>cuisineKo(c.trim().toLowerCase())).join(' ')).toLowerCase().includes(q))}
+  if(F.kw){const q=F.kw;rows=rows.filter(r=>(r[1]+' '+r[2]+' '+r[4]+' '+(window.jzGuess?.(r)?.label||'')+' '+(r[4]||'').split(';').map(c=>cuisineKo(c.trim().toLowerCase())).join(' ')).toLowerCase().includes(q))}
   if(F.hours)rows=rows.filter(r=>r[9]);if(F.open)rows=rows.filter(r=>openNow(r[9])===true);if(F.nochain)rows=rows.filter(r=>!r[11]);
   if(F.user)rows.forEach(r=>r._d=distKm(F.user.lat,F.user.lon,r[5],r[6]));
   if(F.sort==='dist'&&F.user)rows=[...rows].sort((a,b)=>a._d-b._d);else if(F.sort==='city')rows=[...rows].sort((a,b)=>a[7]-b[7]||a[1].localeCompare(b[1],'ja'));else rows=[...rows].sort((a,b)=>a[1].localeCompare(b[1],'ja'));
@@ -320,7 +320,7 @@ function osmCard(r,doc,slug,cityOverride){
   return `<article class="v12-card" data-key="${esc(key)}">
    <div class="v12-card-top"><span class="tag" style="background:${KIND_COLOR[r[3]]}1a;color:${KIND_COLOR[r[3]]}">${KIND[r[3]]||''}</span>${cs.slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}${r[11]?'<span class="tag v12-chain">체인</span>':''}${dist}</div>
    <h3>${esc(r[1])}</h3>${r[2]?`<div class="japan">${esc(r[2])}</div>`:''}
-   <div class="tiny">📍 ${esc(doc?.pref||'')} ${esc(city)}${cityKo?' ('+esc(cityKo)+')':''}</div>
+   <div class="tiny">📍 ${esc(doc?.pref||'')} ${esc(city)}${cityKo?' ('+esc(cityKo)+')':''}</div>${window.jzMenuLine?window.jzMenuLine(r,city||doc?.jp||''):''}
    ${r[9]?`<div class="v12-hours">🕒 ${esc(hoursKo(r[9]))} ${badge}</div>`:'<div class="v12-hours tiny">🕒 영업시간 정보 없음 — 지도에서 확인</div>'}
    <div class="v12-actions">
     <a class="btn dark" target="_blank" rel="noopener noreferrer" href="${gmaps(r[1]+' '+(city||doc?.jp||''))}">구글 지도 ↗</a>
