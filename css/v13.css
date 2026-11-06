@@ -100,3 +100,17 @@
 .fz-menu{font-size:13px;font-weight:700;color:#2f4a40}
 .fz-menu span{display:block;font-weight:600;color:#8a6a2a;font-size:12px}
 @media(max-width:600px){.fz-cats{flex-direction:column}.fz-cats>.btn{align-self:flex-start}.fz-chips .pill{font-size:13px;padding:7px 11px}.fz-search input{font-size:16px}}
+/* ---- 음식 분류 · 로컬/관광객 · 현지 평가 ---- */
+.fz-row{display:flex;flex-direction:column;gap:6px}
+.fz-row[hidden]{display:none}
+.fz-food .pill{font-size:13px;padding:7px 11px}
+.fz-lt-note{align-self:center;margin-left:4px}
+.v12-card .tag.fz-local{background:#e7f1ff;color:#2b5aa0}
+.v12-card .tag.fz-tourist{background:#fde9e4;color:#a2462e}
+.v12-card .tag.fz-award{background:#fff1d6;color:#8a5a00;text-decoration:none}
+a.tag.fz-award:hover{text-decoration:underline}
+.fz-awcard{border-color:#efd9a8;background:linear-gradient(180deg,#fffaf0,#fff)}
+.fz-located{color:#1d7a46;font-weight:700}
+.fz-curwrap{border:1px dashed #d8d2c2;border-radius:14px;padding:12px 14px;margin-top:22px}
+.fz-curwrap>summary{cursor:pointer;font-weight:800;font-size:17px;color:#5b4a2a}
+.fz-curwrap[open]>summary{margin-bottom:8px}
