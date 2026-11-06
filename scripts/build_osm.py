@@ -71,6 +71,79 @@ def classify(t):
     return None
 
 
+# ---------- 일본어 읽기(가나) → 한글 (외래어 표기법 기준, 어두 예사소리·어중 거센소리) ----------
+_K = {}
+def _row(chars, cons_init, cons_mid, vowels='aiueo'):
+    for ch, v in zip(chars, vowels):
+        if ch != '_':
+            _K[ch] = (cons_init, cons_mid, v)
+_row('あいうえお', 'ㅇ', 'ㅇ'); _row('かきくけこ', 'ㄱ', 'ㅋ'); _row('がぎぐげご', 'ㄱ', 'ㄱ')
+_row('さしすせそ', 'ㅅ', 'ㅅ'); _row('ざじずぜぞ', 'ㅈ', 'ㅈ'); _row('たちつてと', 'ㄷ', 'ㅌ')
+_row('だぢづでど', 'ㄷ', 'ㄷ'); _row('なにぬねの', 'ㄴ', 'ㄴ'); _row('はひふへほ', 'ㅎ', 'ㅎ')
+_row('ばびぶべぼ', 'ㅂ', 'ㅂ'); _row('ぱぴぷぺぽ', 'ㅍ', 'ㅍ'); _row('まみむめも', 'ㅁ', 'ㅁ')
+_K['や'] = ('ㅇ', 'ㅇ', 'ya'); _K['ゆ'] = ('ㅇ', 'ㅇ', 'yu'); _K['よ'] = ('ㅇ', 'ㅇ', 'yo'); _row('らりるれろ', 'ㄹ', 'ㄹ'); _K['わ'] = ('ㅇ', 'ㅇ', 'w'); _K['を'] = ('ㅇ', 'ㅇ', 'o')
+_K['ち'] = ('ㅈ', 'ㅊ', 'i'); _K['つ'] = ('ㅆ', 'ㅆ', 'eu'); _K['ぢ'] = ('ㅈ', 'ㅈ', 'i'); _K['づ'] = ('ㅈ', 'ㅈ', 'eu')
+_K['じ'] = ('ㅈ', 'ㅈ', 'i'); _K['ず'] = ('ㅈ', 'ㅈ', 'eu'); _K['す'] = ('ㅅ', 'ㅅ', 'eu')
+_CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
+_JUNG = {'a': 'ㅏ', 'i': 'ㅣ', 'u': 'ㅜ', 'e': 'ㅔ', 'o': 'ㅗ', 'ya': 'ㅑ', 'yu': 'ㅠ', 'yo': 'ㅛ', 'w': 'ㅘ', 'eu': 'ㅡ'}
+_JUNGS = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'
+_JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+def _syl(c, v, f=''):
+    return chr(0xAC00 + (_CHO.index(c) * 21 + _JUNGS.index(_JUNG[v])) * 28 + _JONG.index(f))
+def kana2ko(text):
+    """ひらがな/カタカナ 읽기를 한글로. 장음(おう·うう·ー)은 표기하지 않음."""
+    t = ''.join(chr(ord(ch) - 0x60) if 'ァ' <= ch <= 'ヶ' else ch for ch in (text or ''))
+    out = []  # [cho, vowel, final]
+    i = 0
+    while i < len(t):
+        ch = t[i]; nx = t[i + 1] if i + 1 < len(t) else ''
+        if ch in 'んン':
+            if out: out[-1][2] = 'ㄴ'
+            i += 1; continue
+        if ch in 'っッ':
+            if out: out[-1][2] = 'ㅅ'
+            i += 1; continue
+        if ch == 'ー':
+            i += 1; continue
+        if ch not in _K:
+            return ''
+        ci, cm, v = _K[ch]
+        c = ci if not out else cm
+        if nx in 'ゃゅょ' and nx:
+            v = {'ゃ': 'ya', 'ゅ': 'yu', 'ょ': 'yo'}[nx]
+            if ch in 'しじちぢ':
+                v = v[1:]
+            i += 1
+        # 장음 생략: o/u 뒤의 う, o 뒤의 お
+        if out and ch == 'う' and out[-1][1] in ('o', 'u', 'yo', 'yu'):
+            i += 1; continue
+        if out and ch == 'お' and out[-1][1] in ('o', 'yo'):
+            i += 1; continue
+        out.append([c, v, ''])
+        i += 1
+    try:
+        return ''.join(_syl(c, v, f) for c, v, f in out)
+    except Exception:
+        return ''
+_SUFFIX = [('区', ('く',), '구'), ('市', ('し',), '시'), ('町', ('まち', 'ちょう'), '정'), ('村', ('むら', 'そん'), '촌')]
+def ko_name(p):
+    """name:ko 가 없으면 가나 읽기로 한글 이름을 만든다 (예: 中央区 + ちゅうおうく → 주오구)."""
+    if p.get('name:ko'):
+        return p['name:ko']
+    name = p.get('name') or ''
+    kana = p.get('name:ja-Hira') or p.get('name:ja_kana') or p.get('name:ja-Kana') or ''
+    if not kana:
+        return ''
+    kana = ''.join(chr(ord(ch) - 0x60) if 'ァ' <= ch <= 'ヶ' else ch for ch in kana)
+    for kj, reads, ko in _SUFFIX:
+        if name.endswith(kj):
+            for rd in reads:
+                if kana.endswith(rd):
+                    base = kana2ko(kana[:-len(rd)])
+                    return base + ko if base else ''
+    return kana2ko(kana)
+
+
 def read_seq(path):
     """osmium geojsonseq: one Feature per line, optionally prefixed by RS (0x1e)."""
     with open(path, encoding='utf-8') as fh:
@@ -101,7 +174,7 @@ def load_admin(path):
             continue
         if g.is_empty:
             continue
-        levels[lv].append((g, {'name': name, 'ko': p.get('name:ko') or '', 'en': p.get('name:en') or ''}))
+        levels[lv].append((g, {'name': name, 'ko': ko_name(p), 'en': p.get('name:en') or ''}))
     return levels
 
 
@@ -241,12 +314,16 @@ def main():
     ward_idx = assign(points, adm['8'])
 
     by_pref = collections.defaultdict(list)
+    ward_ko = {}
     for i, r in enumerate(recs):
         if pref_idx[i] < 0:
             continue
         jp = adm['4'][pref_idx[i]][1]['name']
         city = adm['7'][city_idx[i]][1] if city_idx[i] >= 0 else None
-        ward = adm['8'][ward_idx[i]][1]['name'] if ward_idx[i] >= 0 else ''
+        wd = adm['8'][ward_idx[i]][1] if ward_idx[i] >= 0 else None
+        ward = wd['name'] if wd else ''
+        if wd and wd['ko']:
+            ward_ko[ward] = wd['ko']
         by_pref[jp].append((r, city, ward))
 
     os.makedirs(args.out, exist_ok=True)
@@ -272,7 +349,8 @@ def main():
         lats = [r[5] for r in out_rows] or [0]
         lons = [r[6] for r in out_rows] or [0]
         doc = {'v': 1, 'pref': ko, 'jp': jp, 'built': args.built, 'attribution': index['attribution'],
-               'cities': cities, 'rows': out_rows}
+               'cities': cities, 'wards': {w: ward_ko[w] for w in sorted({r[8] for r in out_rows if r[8]}) if w in ward_ko},
+               'rows': out_rows}
         path = os.path.join(args.out, slug + '.json')
         with open(path, 'w', encoding='utf-8') as fh:
             json.dump(doc, fh, ensure_ascii=False, separators=(',', ':'))
