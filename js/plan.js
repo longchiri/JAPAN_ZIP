@@ -197,18 +197,18 @@ window.jzGuess=jzGuess;window.jzMenuLine=jzMenuLine;
 /* ---------- 🍽️ 뭐 먹을까? 음식 분류 12개 (가게 종류 기준 · 추정) ---------- */
 // [키, 이름, 가게 종류 키들, 체인 종류/텍스트 정규식, 이 분류에 넣는 OSM kind]
 const FOODCATS=[
- ['beef','🥩 소고기',['yakiniku','gyudon','steak','gyutan','shabu','teppan'],/소고기|규동|규메시|야키니쿠|스테이크|우설|규탄|함바그|햄버그|와규|스키야키|샤부샤부|焼肉|牛/,[]],
+ ['beef','🥩 소고기',['yakiniku','gyudon','steak','gyutan','shabu','teppan'],/소고기|규동|규메시|야키니쿠|스테이크|우설|규탄|함바그|햄버그|와규|스키야키|샤부샤부|焼肉|牛|すき焼|精肉|肉料理/,[]],
  ['pork','🐷 돼지고기',['tonkatsu','kushikatsu','okisoba'],/돼지|돈카츠|가츠동|쿠시카츠|생강구이|豚|とんかつ/,[]],
  ['chicken','🍗 닭고기',['yakitori','motsunabe'],/닭|야키토리|가라아게|치킨|오야코동|미즈타키|焼鳥|焼き鳥|鶏/,[]],
- ['sea','🐟 회·초밥·해산물',['sushi','kaiten','seafood','unagi','fugu','crab'],/초밥|스시|회전초밥|생선회|모둠회|회덮밥|사시미|해산물|생선|장어|대게|털게|게살|게 요리|굴|카이센|고마사바|寿司|鮨|海鮮|うなぎ/,[]],
- ['noodle','🍜 면',['ramen','udon','soba','champon','okisoba'],/라멘|우동|소바|짬뽕|츠케멘|탄멘|냉면|소면|ラーメン|うどん|そば|蕎麦/,[]],
- ['rice','🍚 밥·정식·덮밥',['teishoku','washoku','gyudon','tempura','onigiri','tonkatsu'],/정식|덮밥|규동|텐동|가츠동|오야코동|밥|오니기리|도시락|定食/,[]],
+ ['sea','🐟 회·초밥·해산물',['sushi','kaiten','seafood','unagi','fugu','crab'],/초밥|스시|회전초밥|생선회|모둠회|회덮밥|사시미|해산물|생선|장어|대게|털게|게살|게 요리|굴|카이센|고마사바|寿司|鮨|海鮮|うなぎ|鰻|鮎|蒲鉾|しらす|魚|あんこう|海産/,[]],
+ ['noodle','🍜 면',['ramen','udon','soba','champon','okisoba'],/라멘|우동|소바|짬뽕|츠케멘|탄멘|냉면|소면|ラーメン|うどん|そば|蕎麦|麺/,[]],
+ ['rice','🍚 밥·정식·덮밥',['teishoku','washoku','gyudon','tempura','onigiri','tonkatsu'],/정식|덮밥|규동|텐동|가츠동|오야코동|밥|오니기리|도시락|定食|料亭|料理屋|京料理|懐石|割烹|精進|会席|料理旅館|日本料理|有職|仕出し|弁当|湯豆腐|豆富料理/,[]],
  ['curry','🍛 카레',['curry','soupcurry','indian'],/카레|カレー/,[]],
  ['asian','🥟 중화·한식·아시아',['chinese','korean','thai','champon'],/중화|중식|교자|만두|한식|태국|베트남|쌀국수|中華|中国|餃子/,[]],
  ['western','🍝 양식',['italian','pizza','french','yoshoku','famires','burger','steak','kitchen','bal'],/양식|이탈리안|파스타|피자|프렌치|오므라이스|함바그|햄버거|버거|패밀리|도리아|イタリア|フランス|洋食/,[]],
  ['teppan','🍢 철판·길거리 간식',['okonomi','takoyaki','taiyaki','crepe'],/오코노미|타코야키|몬자|타이야키|크레페|お好み|たこ焼/,[]],
- ['drink','🍺 술·안주',['izakaya','yakitori','oden','bar','snack','bal','kushikatsu'],/술집|술과|이자카야|사케|타치노미|와인|야키토리|居酒屋|焼鳥/,['i','b','p']],
- ['sweet','☕ 카페·디저트',['cafe','kissa','starbucks','bakery','sweets','gelato','crepe','taiyaki'],/카페|커피|디저트|빵|케이크|화과자|킷사|도넛|아이스크림|パン|カフェ|喫茶|スイーツ|和菓子/,['c','k']],
+ ['drink','🍺 술·안주',['izakaya','yakitori','oden','bar','snack','bal','kushikatsu'],/술집|술과|이자카야|사케|타치노미|와인|야키토리|居酒屋|焼鳥|酒造|焼酎|おでん/,['i','b','p']],
+ ['sweet','☕ 카페·디저트',['cafe','kissa','starbucks','bakery','sweets','gelato','crepe','taiyaki'],/카페|커피|디저트|빵|케이크|화과자|킷사|도넛|아이스크림|パン|カフェ|喫茶|スイーツ|和菓子|菓子|甘味|茶屋|茶房|団子|餅|煎餅|八ツ橋|羊羹|フルーツ/,['c','k']],
 ];
 function jzFoodCats(r){
   if(r._fc)return r._fc;
@@ -218,6 +218,47 @@ function jzFoodCats(r){
 }
 function jzFoodCatsText(text){const out=new Set();for(const c of FOODCATS)if(c[3].test(text))out.add(c[0]);return out}
 window.JZ_FOODCATS=FOODCATS.map(c=>[c[0],c[1]]);window.jzFoodCats=jzFoodCats;window.jzFoodCatsText=jzFoodCatsText;
+
+/* ---------- 🍱 지역 먹거리: 문화청 「100年フード」 표시 ---------- */
+(function hyakunenFood(){
+  const cards=document.getElementById('foodCards');if(!cards)return;
+  const PJ=typeof JAPAN_PREF_JP!=='undefined'?JAPAN_PREF_JP:{};const KO_BY_JP=Object.fromEntries(Object.entries(PJ).map(([k,v])=>[v,k]));
+  const CAT={'伝統':['전통','에도 시대부터 이어진 음식'],'近代':['근대','메이지~쇼와 초에 생긴 음식'],'未来':['미래','앞으로 100년 이어갈 음식']};
+  const n=x=>String(x||'').normalize('NFKC').replace(/[\s・･·（）()「」〜～\-]/g,'').toLowerCase();
+  let HF=null;
+  const panel=document.createElement('section');panel.className='hf-panel';panel.id='hfPanel';cards.after(panel);
+  const regSel=document.getElementById('foodRegion'),prefSel=document.getElementById('foodPref');
+  function itemsFor(prefKo,regionKo){if(!HF)return [];return HF.filter(it=>{const ps=it.prefs;if(prefKo)return ps.includes(prefKo);if(regionKo&&typeof JAPAN_REGIONS!=='undefined')return ps.some(p=>(JAPAN_REGIONS[regionKo]||[]).includes(p));return true})}
+  function renderPanel(){
+    if(!HF){panel.innerHTML='';return}
+    const pk=prefSel?.value||'',rk=regSel?.value||'';const list=itemsFor(pk,rk);
+    const where=pk||rk||'일본 전국';
+    panel.innerHTML=`<details ${pk?'open':''}><summary>🏮 문화청 「100年フード」 인증 음식 · ${escH(where)} (${list.length})</summary><p class="tiny">일본 문화청이 100년 넘게(또는 앞으로 100년) 이어갈 지역 음식 문화로 인증한 음식이에요. 가게 인증이 아니라 음식 인증이에요. <a href="${escH(HF_URL)}" target="_blank" rel="noopener noreferrer">공식 목록 ↗</a></p>
+      <div class="hf-list">${list.slice(0,pk?200:60).map(it=>{const c=CAT[it.cat]||[it.cat,''];const q=it.name.replace(/[（(].*?[)）]/g,'').replace(/[～〜].*$/,'')+' '+it.prefJp;
+        return `<div class="hf-item"><div><span class="hf-cat hf-${escH(it.cat)}">🏮 ${escH(c[0])}의 100년 푸드 · ${escH(it.year)}</span><b>${escH(it.name)}</b><small>${escH(it.prefs.join('·'))}</small><p>${escH(it.ko)}</p></div><div class="hf-links"><a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}">📍 파는 곳 찾기 ↗</a><a target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(q)}">📷 사진 ↗</a></div></div>`}).join('')}${!pk&&list.length>60?'<p class="tiny">도도부현을 고르면 그 지역 인증 음식이 모두 보여요.</p>':''}</div></details>`;
+  }
+  let HF_URL='https://www.bunka.go.jp/seisaku/shokubunka/foodculture/hyakunenfood/';
+  function decorate(){
+    if(!HF)return;
+    for(const card of cards.querySelectorAll('.food-item')){
+      if(card.dataset.hf)continue;card.dataset.hf='1';
+      const pref=(card.querySelector('.food-tag')?.textContent||'').split('·').pop().trim();
+      const jp=n(card.querySelector('.jp')?.textContent),ko=n(card.querySelector('h3')?.textContent);
+      const hit=HF.find(it=>it.prefs.includes(pref)&&jp.length>=2&&it.parts.some(p=>p===jp||(jp.length>=3&&p.length>=3&&(p.includes(jp)||jp.includes(p)))));
+      if(hit){const c=CAT[hit.cat]||[hit.cat,''];const b=document.createElement('span');b.className='hf-badge';b.title=c[1];b.textContent='🏮 문화청 100년 푸드 ('+c[0]+' · '+hit.year+' 인증)';card.querySelector('h3')?.before(b)}
+    }
+  }
+  fetch('data/hyakunen_food.json').then(r=>r.ok?r.json():null).then(d=>{if(!d)return;HF_URL=d.url||HF_URL;
+    HF=d.items.map(([name,prefJp,cat,year,ko])=>{const prefs=String(prefJp).split('・').map(p=>KO_BY_JP[p]||p);
+      const inner=(name.match(/[（(～〜](.*?)[)）～〜]/)||[])[1]||'';
+      const parts=[name,name.replace(/[（(].*?[)）]/g,''),...inner.split(/[、,]/)].map(n).filter(Boolean);
+      return {name,prefJp,prefs,cat,year,ko,parts}});
+    decorate();renderPanel()}).catch(()=>{});
+  new MutationObserver(decorate).observe(cards,{childList:true});
+  regSel?.addEventListener('change',()=>setTimeout(renderPanel,0));prefSel?.addEventListener('change',()=>setTimeout(renderPanel,0));
+  document.getElementById('foodClear')?.addEventListener('click',()=>setTimeout(renderPanel,0));
+  const st=document.createElement('style');st.textContent='.hf-badge{display:inline-block;font-size:11px;font-weight:800;color:#8a3b12;background:#ffeede;border:1px solid #f3c9a6;border-radius:20px;padding:3px 9px;margin:4px 0}.hf-panel{margin-top:18px}.hf-panel>details{border:1px solid #f0d4bd;border-radius:16px;background:#fffaf5;padding:12px 14px}.hf-panel summary{cursor:pointer;font-weight:800;font-size:16px;color:#7a3a14}.hf-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px}.hf-item{display:flex;flex-direction:column;justify-content:space-between;gap:8px;background:#fff;border:1px solid #f1e2d4;border-radius:12px;padding:10px 12px}.hf-item b{display:block;font-size:15px}.hf-item small{color:#8a7a6a}.hf-item p{margin:4px 0 0;font-size:13px;color:#4e4a44}.hf-cat{display:inline-block;font-size:11px;font-weight:800;border-radius:20px;padding:2px 8px;margin-bottom:4px;background:#ffeede;color:#8a3b12}.hf-近代{background:#e8eefc;color:#2b4f9a}.hf-未来{background:#e6f5ec;color:#1d6b40}.hf-links{display:flex;gap:10px;font-size:12px;font-weight:700}.hf-links a{color:var(--blue,#375f93)}';document.head.append(st);
+})();
 {const css=document.createElement('style');css.textContent='.jz-menu-line{font-size:13px;color:#2f4a40;background:#f7faf6;border-radius:10px;padding:8px 10px;line-height:1.55}.jz-price{color:#8a6a2a;font-weight:700;font-size:12px}.jz-price small{font-weight:500;color:#9a8a6a}.jz-odesc{font-size:12px;color:#5b6b64;margin-top:2px}.jz-photo{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--blue,#375f93)}.jz-chain{background:#fff8ec;border:1px solid #f0dcb4}.jz-items{margin:4px 0 2px;padding-left:18px}.jz-items b{color:#8a5a12}.jz-price-note{font-size:11px;color:#6b7a73}.jz-price-note a{text-decoration:underline}';document.head.append(css)}
 
 if(typeof buildSchedule!=='function'||typeof renderSchedule!=='function')return;
