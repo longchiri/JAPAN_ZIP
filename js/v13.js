@@ -325,6 +325,9 @@ function renderCur(){
   $('fzCur').innerHTML=list.length?list.slice(0,F.shownCur).map(p=>curCard(p,favSet)).join(''):`<div class="placeholder"><b>${F.fav?'저장한 추천 장소가 없어요.':'이 조건의 추천 장소가 없어요.'}</b><p>${F.fav?'추천 카드의 ☆를 누르면 여기에 모여요.':'아래 📋 전체 가게에서 찾아보세요.'}</p></div>`;
   $('fzCurMore').hidden=list.length<=F.shownCur;$('fzCurMore').textContent='추천 더 보기 ('+fmt(Math.min(F.shownCur,list.length))+' / '+fmt(list.length)+')';
 }
+// 일본어 가게 이름 아래 한글 읽기 (작은 글씨)
+function koLine(ko,name){return ko&&ko!==name?`<div class="fz-ko" title="한글 읽기 (자동 변환이라 실제 발음과 조금 다를 수 있어요)">🇰🇷 ${esc(ko)}</div>`:''}
+window.jzKoLine=koLine;
 function osmCard(r,doc,slug,cityOverride){
   const city=cityOverride??(doc?.cities?.[r[7]]?(doc.cities[r[7]][0]+(r[8]?' '+r[8]:'')):''),cityKo=cityOverride!=null?'':[doc?.cities?.[r[7]]?.[1]||'',r[8]?((doc?.wards?.[r[8]])||WARD_KO[r[8]]||''):''].filter(Boolean).join(' ');
   const on=openNow(r[9]);const key=slug+'|'+r[0];const fav=!!favs[key];
@@ -334,7 +337,7 @@ function osmCard(r,doc,slug,cityOverride){
   const t=OSM_TYPE[r[0][0]]||'node',id=r[0].slice(1);
   return `<article class="v12-card" data-key="${esc(key)}">
    <div class="v12-card-top"><span class="tag" style="background:${KIND_COLOR[r[3]]}1a;color:${KIND_COLOR[r[3]]}">${KIND[r[3]]||''}</span>${cs.slice(0,3).map(c=>`<span class="tag">${esc(c)}</span>`).join('')}${r[11]?'<span class="tag v12-chain">체인</span>':''}${ltBadge(r,doc)}${awBadge(r,doc)}${dist}</div>
-   <h3>${esc(r[1])}</h3>${r[2]?`<div class="japan">${esc(r[2])}</div>`:''}
+   <h3>${esc(r[1])}</h3>${koLine(r[15],r[1])}${r[2]&&r[2]!==r[15]?`<div class="japan">${esc(r[2])}</div>`:''}
    <div class="tiny">📍 ${esc(doc?.pref||'')} ${esc(city)}${cityKo?' ('+esc(cityKo)+')':''}</div>${window.jzMenuLine?window.jzMenuLine(r,city||doc?.jp||''):''}
    ${r[9]?`<div class="v12-hours">🕒 ${esc(hoursKo(r[9]))} ${badge}</div>`:'<div class="v12-hours tiny">🕒 영업시간 정보 없음 — 지도에서 확인</div>'}
    <div class="v12-actions">
@@ -395,7 +398,7 @@ function loadAwards(){
   if(AW)return Promise.resolve(AW);if(awP)return awP;
   awP=fetch('data/awards.json').then(r=>r.ok?r.json():null).then(d=>{if(!d)return null;
     AW={byPref:{},updated:d.updated};
-    for(const s of d.shops){const ko=PREF_BY_JP[s[1]];if(!ko)continue;(AW.byPref[ko]??=[]).push({name:s[0],loc:s[2]||'',src:d.sources[s[3]],cu:s[4]||'',founded:s[5]||'',hy:s[6]||'',n:normName(s[0])})}
+    for(const s of d.shops){const ko=PREF_BY_JP[s[1]];if(!ko)continue;(AW.byPref[ko]??=[]).push({name:s[0],loc:s[2]||'',src:d.sources[s[3]],cu:s[4]||'',founded:s[5]||'',hy:s[6]||'',ko:s[7]||'',n:normName(s[0])})}
     return AW}).catch(()=>null);
   return awP;
 }
@@ -452,7 +455,7 @@ function awardCard(a){
   const dist=(F.user&&r&&a._d<1e8)?`<span class="v12-dist">📏 ${a._d<1?Math.round(a._d*1000)+'m':a._d.toFixed(1)+'km'}</span>`:'';
   return `<article class="v12-card fz-awcard" ${r?`data-key="${esc(slug+'|'+r[0])}"`:''} data-awn="${esc(a.n)}">
    <div class="v12-card-top">${badges}${dist}</div>
-   <h3>${esc(a.name)}</h3>
+   <h3>${esc(a.name)}</h3>${koLine(a.ko||r?.[15],a.name)}
    <div class="tiny">📍 ${esc(F.pref)} ${esc(city||'')}${a.loc&&!city.includes(a.loc)?' · '+esc(a.loc):''} ${r?'<span class="fz-located">✓ 지도 위치 확인</span>':''}</div>
    ${line}
    ${r&&r[9]?`<div class="v12-hours">🕒 ${esc(hoursKo(r[9]))}</div>`:''}
@@ -515,7 +518,7 @@ function onOsmClick(e){
   const [slug,id]=key.split('|');const doc=F.docs.get(slug);const row=doc?.rows.find(r=>r[0]===id);const fv=favs[key];
   const name=row?row[1]:fv?.name,pref=row?doc.pref:fv?.pref||'',city=row?(doc.cities[row[7]]?.[0]||'')+(row[8]?' '+row[8]:''):fv?.city||'';
   if(b.dataset.v12==='fav'){
-    if(favs[key])delete favs[key];else if(row)favs[key]={name:row[1],alt:row[2],kind:row[3],cuisine:row[4],lat:row[5],lon:row[6],city,pref,hours:row[9],web:row[10],slug,id:row[0],at:Date.now()};
+    if(favs[key])delete favs[key];else if(row)favs[key]={name:row[1],alt:row[2],ko:row[15]||'',kind:row[3],cuisine:row[4],lat:row[5],lon:row[6],city,pref,hours:row[9],web:row[10],slug,id:row[0],at:Date.now()};
     store.set(FAV_KEY,favs);b.classList.toggle('on',!!favs[key]);b.textContent=favs[key]?'★':'☆';toast(favs[key]?'★ 저장했어요':'저장을 취소했어요');if(F.fav)renderOsm();
   }else if(b.dataset.v12==='trip'){
     if(typeof window.jzAddPlace!=='function'){toast('일정 편집기를 찾을 수 없어요');return}
@@ -562,8 +565,8 @@ async function toggleMap(){
 function drawMap(){
   if(!F.map||!F.cluster)return;F.cluster.clearLayers();
   const pts=F.fav?Object.values(favs).map(v=>({lat:v.lat,lon:v.lon,name:v.name,kind:v.kind,sub:v.pref+' '+(v.city||'')}))
-    :F.osm.slice(0,30000).map(r=>({lat:r[5],lon:r[6],name:r[1],kind:r[3],sub:(F.doc?.cities?.[r[7]]?.[0]||F.pref)}));
-  const ms=pts.map(p=>L.circleMarker([p.lat,p.lon],{radius:7,weight:2,color:'#fff',fillColor:KIND_COLOR[p.kind]||'#2d6659',fillOpacity:.95}).bindPopup(`<b>${esc(p.name)}</b><br>${KIND[p.kind]||''} · ${esc(p.sub)}<br><a target="_blank" rel="noopener noreferrer" href="${gmaps(p.name+' '+p.sub)}">구글 지도 ↗</a> · <a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}">길찾기</a>`));
+    :F.osm.slice(0,30000).map(r=>({lat:r[5],lon:r[6],name:r[1],ko:r[15]||'',kind:r[3],sub:(F.doc?.cities?.[r[7]]?.[0]||F.pref)}));
+  const ms=pts.map(p=>L.circleMarker([p.lat,p.lon],{radius:7,weight:2,color:'#fff',fillColor:KIND_COLOR[p.kind]||'#2d6659',fillOpacity:.95}).bindPopup(`<b>${esc(p.name)}</b>${p.ko&&p.ko!==p.name?'<br><small>🇰🇷 '+esc(p.ko)+'</small>':''}<br>${KIND[p.kind]||''} · ${esc(p.sub)}<br><a target="_blank" rel="noopener noreferrer" href="${gmaps(p.name+' '+p.sub)}">구글 지도 ↗</a> · <a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}">길찾기</a>`));
   F.cluster.addLayers(ms);
   if(F.user)L.circleMarker([F.user.lat,F.user.lon],{radius:9,color:'#fff',weight:3,fillColor:'#1a73e8',fillOpacity:1}).bindPopup('내 위치').addTo(F.cluster);
   if(ms.length){try{F.map.fitBounds(F.cluster.getBounds(),{padding:[20,20],maxZoom:16})}catch(e){}}
